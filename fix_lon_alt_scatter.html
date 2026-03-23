@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GNSS Fix: Longitude - Altitude Scatter</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: #121a33;
+        --text: #e7ecff;
+        --muted: #aab3d6;
+        --grid: rgba(255, 255, 255, 0.08);
+      }
+
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+          "Apple Color Emoji", "Segoe UI Emoji";
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .wrap {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 16px;
+        padding: 16px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 14px;
+      }
+
+      h1 {
+        font-size: 16px;
+        margin: 0 0 10px 0;
+        font-weight: 650;
+      }
+
+      .row {
+        margin: 10px 0;
+      }
+
+      label {
+        display: block;
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+
+      input[type="file"] {
+        width: 100%;
+        color: var(--muted);
+      }
+
+      button {
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: transparent;
+        color: var(--text);
+        padding: 8px 10px;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .kv {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 6px 10px;
+        font-size: 13px;
+        margin-top: 12px;
+      }
+      .kv .k {
+        color: var(--muted);
+      }
+      .kv .v {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.4;
+        margin-top: 10px;
+      }
+
+      .main {
+        background: var(--panel);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 10px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      svg {
+        display: block;
+        width: 100%;
+        height: 680px;
+      }
+
+      .tooltip {
+        position: absolute;
+        pointer-events: none;
+        background: rgba(10, 14, 30, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--text);
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-size: 12px;
+        max-width: 260px;
+        display: none;
+        z-index: 10;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      }
+
+      .legend {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .bar {
+        width: 160px;
+        height: 10px;
+        border-radius: 999px;
+        background: linear-gradient(
+          90deg,
+          #2b5cff 0%,
+          #00d4ff 35%,
+          #34f5a7 65%,
+          #f5ff3b 100%
+        );
+        opacity: 0.95;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="panel">
+        <h1>GNSS Fix: Longitude vs Altitude</h1>
+
+        <div class="row">
+          <label for="file">`Fix` satırlarını içeren `.txt` dosyası yükle</label>
+          <input id="file" type="file" accept=".txt,text/plain" />
+        </div>
+
+        <div class="row" style="display: flex; gap: 10px; align-items: center">
+          <button id="clearBtn" type="button">Temizle</button>
+        </div>
+
+        <div class="kv">
+          <div class="k">Nokta sayısı</div>
+          <div class="v" id="count">-</div>
+
+          <div class="k">Accuracy min/max (m)</div>
+          <div class="v" id="accRange">-</div>
+
+          <div class="k">Lon min/max</div>
+          <div class="v" id="lonRange">-</div>
+
+          <div class="k">Alt min/max</div>
+          <div class="v" id="altRange">-</div>
+        </div>
+
+        <div class="legend">
+          <div class="bar" aria-hidden="true"></div>
+          <div>Renk: `AccuracyMeters` (dolu ise)</div>
+        </div>
+
+        <div class="hint">
+          Noktalar: x=`LongitudeDegrees`, y=`AltitudeMeters`. Hover ile her fix için
+          detaylar görünür (varsa `AccuracyMeters` ve `UnixTimeMillis`).
+        </div>
+      </div>
+
+      <div class="main">
+        <svg id="chart" viewBox="0 0 900 680" preserveAspectRatio="xMidYMid meet"></svg>
+        <div id="tooltip" class="tooltip"></div>
+      </div>
+    </div>
+
+    <script>
+      const svg = d3.select("#chart");
+      const tooltip = document.getElementById("tooltip");
+
+      const els = {
+        file: document.getElementById("file"),
+        clearBtn: document.getElementById("clearBtn"),
+        count: document.getElementById("count"),
+        accRange: document.getElementById("accRange"),
+        lonRange: document.getElementById("lonRange"),
+        altRange: document.getElementById("altRange"),
+      };
+
+      const FIX_LINE_PREFIX = "Fix,";
+
+      function toNum(v) {
+        if (v === undefined || v === null) return NaN;
+        const s = String(v).trim();
+        if (s === "") return NaN;
+        return Number(s);
+      }
+
+      // Fix kolonları (başlığa göre):
+      // 0 Fix, 1 Provider, 2 Lat, 3 Lon, 4 Alt, 5 Speed, 6 Accuracy,
+      // 7 Bearing, 8 UnixTimeMillis, ...
+      function parseFixText(text) {
+        const points = [];
+        const lines = text.split(/\r?\n/);
+
+        for (const line of lines) {
+          if (!line.startsWith(FIX_LINE_PREFIX)) continue;
+
+          // split(",") boş alanları da korur; log satırında ardışık virgüller olabilir
+          const f = line.split(",");
+
+          // Güvenlik: en az lon/alt kolonları gelmeli
+          // f[3]=LongitudeDegrees, f[4]=AltitudeMeters, f[6]=AccuracyMeters, f[8]=UnixTimeMillis
+          if (f.length < 9) continue;
+
+          const lon = toNum(f[3]);
+          const alt = toNum(f[4]);
+          const accuracy = toNum(f[6]);
+          const unixTimeMillis = toNum(f[8]);
+
+          if (!Number.isFinite(lon) || !Number.isFinite(alt)) continue;
+
+          points.push({
+            lon,
+            alt,
+            accuracy: Number.isFinite(accuracy) ? accuracy : null,
+            unixTimeMillis: Number.isFinite(unixTimeMillis) ? unixTimeMillis : null,
+          });
+        }
+
+        return points;
+      }
+
+      function fmtNum(v, digits = 6) {
+        if (!Number.isFinite(v)) return "-";
+        const abs = Math.abs(v);
+        if (abs !== 0 && (abs < 0.001 || abs >= 1000000)) return v.toExponential(3);
+        return v.toFixed(digits).replace(/\.?0+$/, "");
+      }
+
+      function render(points) {
+        svg.selectAll("*").remove();
+
+        if (!points || points.length === 0) {
+          els.count.textContent = "0";
+          els.accRange.textContent = "-";
+          els.lonRange.textContent = "-";
+          els.altRange.textContent = "-";
+          return;
+        }
+
+        const width = 900;
+        const height = 680;
+        const margin = { top: 36, right: 22, bottom: 58, left: 80 };
+
+        const innerW = width - margin.left - margin.right;
+        const innerH = height - margin.top - margin.bottom;
+
+        const lonExtent = d3.extent(points, (d) => d.lon);
+        const altExtent = d3.extent(points, (d) => d.alt);
+
+        const accVals = points.map((d) => d.accuracy).filter((v) => v !== null);
+        const hasAcc = accVals.length > 0;
+        const accExtent = hasAcc ? d3.extent(accVals) : [0, 1];
+
+        els.count.textContent = String(points.length);
+        els.lonRange.textContent = `${fmtNum(lonExtent[0], 6)} / ${fmtNum(lonExtent[1], 6)}`;
+        els.altRange.textContent = `${fmtNum(altExtent[0], 3)} / ${fmtNum(altExtent[1], 3)}`;
+        els.accRange.textContent = hasAcc
+          ? `${fmtNum(accExtent[0], 3)} / ${fmtNum(accExtent[1], 3)}`
+          : "-";
+
+        // arka plan
+        const g = svg
+          .append("g")
+          .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        g.append("rect")
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("width", innerW)
+          .attr("height", innerH)
+          .attr("fill", "transparent");
+
+        const x = d3
+          .scaleLinear()
+          .domain(lonExtent)
+          .nice()
+          .range([0, innerW]);
+
+        const y = d3
+          .scaleLinear()
+          .domain(altExtent)
+          .nice()
+          .range([innerH, 0]);
+
+        const xAxis = d3.axisBottom(x).ticks(10);
+        const yAxis = d3.axisLeft(y).ticks(10);
+
+        // Grid
+        g.append("g")
+          .attr("class", "grid-x")
+          .attr("transform", `translate(0,${innerH})`)
+          .call(
+            d3
+              .axisBottom(x)
+              .ticks(10)
+              .tickSize(-innerH)
+              .tickFormat("")
+          )
+          .selectAll("line")
+          .attr("stroke", "rgba(255,255,255,0.08)");
+
+        g.append("g")
+          .attr("class", "grid-y")
+          .call(
+            d3
+              .axisLeft(y)
+              .ticks(10)
+              .tickSize(-innerW)
+              .tickFormat("")
+          )
+          .selectAll("line")
+          .attr("stroke", "rgba(255,255,255,0.08)");
+
+        g.append("g")
+          .attr("transform", `translate(0,${innerH})`)
+          .call(xAxis)
+          .selectAll("text")
+          .attr("fill", "rgba(231,236,255,0.85)");
+
+        g.append("g")
+          .call(yAxis)
+          .selectAll("text")
+          .attr("fill", "rgba(231,236,255,0.85)");
+
+        g.selectAll(".domain").attr("stroke", "rgba(255,255,255,0.35)");
+        g.selectAll(".tick line").attr("stroke", "rgba(255,255,255,0.22)");
+
+        // Labels
+        g.append("text")
+          .attr("x", innerW / 2)
+          .attr("y", innerH + 45)
+          .attr("text-anchor", "middle")
+          .attr("fill", "rgba(231,236,255,0.9)")
+          .attr("font-size", 13)
+          .text("LongitudeDegrees (deg)");
+
+        g.append("text")
+          .attr("transform", `rotate(-90)`)
+          .attr("x", -innerH / 2)
+          .attr("y", -60)
+          .attr("text-anchor", "middle")
+          .attr("fill", "rgba(231,236,255,0.9)")
+          .attr("font-size", 13)
+          .text("AltitudeMeters (m)");
+
+        const color = hasAcc
+          ? d3
+              .scaleSequential()
+              .domain(accExtent)
+              .interpolator(d3.interpolateTurbo)
+          : () => "rgba(255,255,255,0.8)";
+
+        const pointG = g.append("g");
+
+        const circles = pointG
+          .selectAll("circle")
+          .data(points)
+          .enter()
+          .append("circle")
+          .attr("cx", (d) => x(d.lon))
+          .attr("cy", (d) => y(d.alt))
+          .attr("r", 3)
+          .attr("fill", (d) => color(d.accuracy === null ? accExtent[0] : d.accuracy))
+          .attr("opacity", 0.82)
+          .attr("stroke", "rgba(255,255,255,0.12)");
+
+        // Tooltip
+        function showTip(event, d) {
+          const timeStr = d.unixTimeMillis !== null
+            ? new Date(d.unixTimeMillis).toISOString().replace("T", " ").replace("Z", "")
+            : "-";
+
+          const accStr = d.accuracy !== null ? `${fmtNum(d.accuracy, 3)} m` : "-";
+
+          tooltip.innerHTML = `
+            <div><b>Lon</b>: ${fmtNum(d.lon, 6)}</div>
+            <div><b>Alt</b>: ${fmtNum(d.alt, 3)} m</div>
+            <div><b>Accuracy</b>: ${accStr}</div>
+            <div><b>UnixTimeMillis</b>: ${d.unixTimeMillis !== null ? fmtNum(d.unixTimeMillis, 0) : "-"}</div>
+            <div style="color: rgba(231,236,255,0.8); margin-top: 4px;"><b>ISO</b>: ${timeStr}</div>
+          `;
+
+          tooltip.style.display = "block";
+          tooltip.style.left = `${event.clientX + 12}px`;
+          tooltip.style.top = `${event.clientY + 12}px`;
+        }
+
+        function moveTip(event) {
+          tooltip.style.left = `${event.clientX + 12}px`;
+          tooltip.style.top = `${event.clientY + 12}px`;
+        }
+
+        function hideTip() {
+          tooltip.style.display = "none";
+        }
+
+        circles
+          .on("mouseenter", function (event, d) {
+            showTip(event, d);
+          })
+          .on("mousemove", function (event) {
+            moveTip(event);
+          })
+          .on("mouseleave", hideTip);
+      }
+
+      function clearChart() {
+        svg.selectAll("*").remove();
+        els.count.textContent = "-";
+        els.accRange.textContent = "-";
+        els.lonRange.textContent = "-";
+        els.altRange.textContent = "-";
+      }
+
+      els.clearBtn.addEventListener("click", () => clearChart());
+
+      els.file.addEventListener("change", async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        const text = await file.text();
+        const points = parseFixText(text);
+        render(points);
+      });
+    </script>
+  </body>
+</html>
+
