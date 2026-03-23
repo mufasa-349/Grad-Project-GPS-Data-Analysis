@@ -142,6 +142,11 @@
         </div>
 
         <div class="row">
+          <div class="k">Distance from first fix (m) range</div>
+          <div class="v" id="distRange">-</div>
+        </div>
+
+        <div class="row">
           <div class="k">AccuracyMeters range (m)</div>
           <div class="v" id="accRange">-</div>
         </div>
@@ -169,6 +174,22 @@
           <div class="row">
             <div class="k">Altitude</div>
             <div class="v" id="selAlt">-</div>
+          </div>
+          <div class="row">
+            <div class="k">Distance from first (m)</div>
+            <div class="v" id="selDist0">-</div>
+          </div>
+          <div class="row">
+            <div class="k">Δ Alt (m) vs first</div>
+            <div class="v" id="selDeltaAlt">-</div>
+          </div>
+          <div class="row">
+            <div class="k">Δ Lat (deg) vs first</div>
+            <div class="v" id="selDeltaLat">-</div>
+          </div>
+          <div class="row">
+            <div class="k">Δ Lon (deg) vs first</div>
+            <div class="v" id="selDeltaLon">-</div>
           </div>
           <div class="row">
             <div class="k">AccuracyMeters</div>
@@ -207,6 +228,7 @@
             Map center: Istanbul Tuzla. Points come from lines starting with <code>Fix,</code>
             and use <code>LatitudeDegrees</code>, <code>LongitudeDegrees</code>, and
             <code>AltitudeMeters</code>.
+            Pin color encodes distance from the first fix (blue=close, red=far).
           </div>
         </div>
       </div>
@@ -221,12 +243,17 @@
 
       const ui = {
         count: document.getElementById("count"),
+        distRange: document.getElementById("distRange"),
         accRange: document.getElementById("accRange"),
         lonRange: document.getElementById("lonRange"),
         altRange: document.getElementById("altRange"),
         selLat: document.getElementById("selLat"),
         selLon: document.getElementById("selLon"),
         selAlt: document.getElementById("selAlt"),
+        selDist0: document.getElementById("selDist0"),
+        selDeltaAlt: document.getElementById("selDeltaAlt"),
+        selDeltaLat: document.getElementById("selDeltaLat"),
+        selDeltaLon: document.getElementById("selDeltaLon"),
         selAcc: document.getElementById("selAcc"),
         selVAcc: document.getElementById("selVAcc"),
         selSpeed: document.getElementById("selSpeed"),
@@ -329,6 +356,22 @@
         ui.selLat.textContent = fmtNum(p.lat, 6);
         ui.selLon.textContent = fmtNum(p.lon, 6);
         ui.selAlt.textContent = `${fmtNum(p.alt, 3)} m`;
+        ui.selDist0.textContent =
+          p.distFromFirstMeters === null || !Number.isFinite(p.distFromFirstMeters)
+            ? "-"
+            : `${fmtNum(p.distFromFirstMeters, 2)} m`;
+        ui.selDeltaAlt.textContent =
+          p.deltaAltMeters === null || !Number.isFinite(p.deltaAltMeters)
+            ? "-"
+            : `${fmtNum(p.deltaAltMeters, 2)} m`;
+        ui.selDeltaLat.textContent =
+          p.deltaLatDegrees === null || !Number.isFinite(p.deltaLatDegrees)
+            ? "-"
+            : `${fmtNum(p.deltaLatDegrees, 6)}`;
+        ui.selDeltaLon.textContent =
+          p.deltaLonDegrees === null || !Number.isFinite(p.deltaLonDegrees)
+            ? "-"
+            : `${fmtNum(p.deltaLonDegrees, 6)}`;
         ui.selAcc.textContent = p.accuracy === null ? "-" : `${fmtNum(p.accuracy, 3)} m`;
         ui.selVAcc.textContent =
           p.verticalAccuracyMeters === null
@@ -340,11 +383,30 @@
         ui.selISO.textContent = p.unixTimeMillis === null ? "-" : fmtISOFromMillis(p.unixTimeMillis);
       }
 
+      // Great-circle distance in meters (Haversine).
+      function haversineMeters(lat1, lon1, lat2, lon2) {
+        const R = 6371000;
+        const toRad = (deg) => (deg * Math.PI) / 180;
+
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      }
+
       function render(points) {
         layerGroup.clearLayers();
         clearError();
 
         ui.count.textContent = String(points.length);
+
+        // Color: blue (close) -> red (far), based on distance from the first fix.
+        let colorByDistance = () => "rgba(43,91,255,0.8)";
 
         const accVals = points.map((d) => d.accuracy).filter((v) => v !== null && Number.isFinite(v));
         const hasAcc = accVals.length > 0;
@@ -362,13 +424,37 @@
         ui.altRange.textContent = `${fmtNum(altExtent[0], 3)} / ${fmtNum(altExtent[1], 3)}`;
 
         if (points.length > 0) {
+          const baseline = points[0];
+
+          // Compute distance and coordinate/altitude deltas vs the first fix.
+          for (const p of points) {
+            p.distFromFirstMeters = haversineMeters(baseline.lat, baseline.lon, p.lat, p.lon);
+            p.deltaAltMeters = p.alt - baseline.alt;
+            p.deltaLatDegrees = p.lat - baseline.lat;
+            p.deltaLonDegrees = p.lon - baseline.lon;
+          }
+
+          const distVals = points
+            .map((d) => d.distFromFirstMeters)
+            .filter((v) => v !== null && Number.isFinite(v));
+
+          const distMin = distVals.length > 0 ? d3.min(distVals) : 0;
+          const distMax = distVals.length > 0 ? d3.max(distVals) : 0;
+          ui.distRange.textContent = `${fmtNum(distMin, 2)} / ${fmtNum(distMax, 2)} m`;
+
+          // Color: blue (close) -> red (far).
+          // Note: if distMin===distMax, sequential scale returns constant color.
+          colorByDistance = d3
+            .scaleSequential(d3.interpolateRgb("#2b5cff", "#ff3b30"))
+            .domain([distMin, distMax]);
+        } else {
+          ui.distRange.textContent = "-";
+        }
+
+        if (points.length > 0) {
           const bounds = L.latLngBounds(points.map((d) => [d.lat, d.lon]));
           map.fitBounds(bounds.pad(0.08));
         }
-
-        const colorScale = hasAcc
-          ? d3.scaleSequential(d3.interpolateTurbo).domain([accMin, accMax])
-          : () => "rgba(255,255,255,0.8)";
 
         const radiusForAccuracy = (a) => {
           if (a === null || !Number.isFinite(a)) return 3;
@@ -379,9 +465,9 @@
         const created = [];
         for (const p of points) {
           const acc = p.accuracy;
-          const fill = hasAcc
-            ? colorScale(acc === null ? accMin : acc)
-            : "rgba(255,255,255,0.75)";
+          const fill = p.distFromFirstMeters === null || !Number.isFinite(p.distFromFirstMeters)
+            ? "rgba(43,91,255,0.8)"
+            : colorByDistance(p.distFromFirstMeters);
 
           const stroke = hasAcc
             ? "rgba(255,255,255,0.55)"
@@ -400,6 +486,17 @@
               <div><b>Latitude</b>: ${fmtNum(p.lat, 6)}</div>
               <div><b>Longitude</b>: ${fmtNum(p.lon, 6)}</div>
               <div><b>Altitude</b>: ${fmtNum(p.alt, 3)} m</div>
+              <div><b>Distance from first</b>: ${
+                p.distFromFirstMeters === null ? "-" : fmtNum(p.distFromFirstMeters, 2) + " m"
+              }</div>
+              <div><b>Δ Alt (vs first)</b>: ${
+                p.deltaAltMeters === null ? "-" : fmtNum(p.deltaAltMeters, 2) + " m"
+              }</div>
+              <div><b>Δ Lat/Lon (vs first)</b>: ${
+                p.deltaLatDegrees === null || p.deltaLonDegrees === null
+                  ? "-"
+                  : fmtNum(p.deltaLatDegrees, 6) + " / " + fmtNum(p.deltaLonDegrees, 6)
+              }</div>
               <div><b>AccuracyMeters</b>: ${p.accuracy === null ? "-" : fmtNum(p.accuracy, 3) + " m"}</div>
               <div><b>VerticalAccuracyMeters</b>: ${
                 p.verticalAccuracyMeters === null ? "-" : fmtNum(p.verticalAccuracyMeters, 3) + " m"
