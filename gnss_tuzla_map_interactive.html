@@ -80,10 +80,37 @@
       }
 
       #map {
-        height: 760px;
+        height: 520px;
         border-radius: 14px;
         overflow: hidden;
         border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      #rightWrap {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      #graphWrap {
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: var(--panel);
+        padding: 10px;
+      }
+
+      #coordChart {
+        width: 100%;
+        height: 320px;
+        display: block;
+      }
+
+      .graphTitle {
+        font-size: 13px;
+        color: rgba(231, 236, 255, 0.92);
+        margin: 2px 0 6px 0;
+        font-weight: 650;
       }
 
       .btn {
@@ -233,7 +260,13 @@
         </div>
       </div>
 
-      <div id="map"></div>
+      <div id="rightWrap">
+        <div id="map"></div>
+        <div id="graphWrap">
+          <div class="graphTitle">Longitude vs Altitude (normalized relation line)</div>
+          <svg id="coordChart" viewBox="0 0 900 320" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -265,6 +298,12 @@
         manualFile: document.getElementById("manualFile"),
         errorBox: document.getElementById("errorBox"),
       };
+
+      const graphSvg = d3.select("#coordChart");
+      const graphTooltip = document.createElement("div");
+      graphTooltip.className = "tooltip";
+      graphTooltip.style.display = "none";
+      document.body.appendChild(graphTooltip);
 
       function toNum(v) {
         if (v === undefined || v === null) return NaN;
@@ -312,7 +351,9 @@
 
           if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(alt)) continue;
 
+          const idx = points.length;
           points.push({
+            idx,
             lat,
             lon,
             alt,
@@ -524,7 +565,193 @@
           layerGroup.addLayer(marker);
         }
 
-        if (points.length > 0) setSelected(points[0]);
+        if (points.length > 0) {
+          setSelected(points[0]);
+          renderCoordGraph(points);
+        }
+      }
+
+      function renderCoordGraph(points) {
+        graphSvg.selectAll("*").remove();
+
+        if (!points || points.length === 0) return;
+
+        const width = 900;
+        const height = 320;
+        const margin = { top: 22, right: 18, bottom: 56, left: 86 };
+        const innerW = width - margin.left - margin.right;
+        const innerH = height - margin.top - margin.bottom;
+
+        const lonExtent = d3.extent(points, (d) => d.lon);
+        const altExtent = d3.extent(points, (d) => d.alt);
+
+        const accVals = points.map((d) => d.accuracy).filter((v) => v !== null && Number.isFinite(v));
+        const hasAcc = accVals.length > 0;
+        const distVals = points
+          .map((d) => d.distFromFirstMeters)
+          .filter((v) => v !== null && Number.isFinite(v));
+        const distMin = distVals.length ? d3.min(distVals) : 0;
+        const distMax = distVals.length ? d3.max(distVals) : 0;
+
+        const colorByDistance = d3
+          .scaleSequential(d3.interpolateRgb("#2b5cff", "#ff3b30"))
+          .domain([distMin, distMax]);
+
+        const x = d3.scaleLinear().domain(lonExtent).nice().range([0, innerW]);
+        const y = d3.scaleLinear().domain(altExtent).nice().range([innerH, 0]);
+
+        const g = graphSvg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // Grid
+        g.append("g")
+          .attr("transform", `translate(0,${innerH})`)
+          .call(
+            d3
+              .axisBottom(x)
+              .ticks(10)
+              .tickSize(-innerH)
+              .tickFormat("")
+          )
+          .selectAll("line")
+          .attr("stroke", "rgba(255,255,255,0.08)");
+
+        g.append("g")
+          .call(
+            d3.axisLeft(y).ticks(8).tickSize(-innerW).tickFormat("")
+          )
+          .selectAll("line")
+          .attr("stroke", "rgba(255,255,255,0.08)");
+
+        g.append("g")
+          .attr("transform", `translate(0,${innerH})`)
+          .call(d3.axisBottom(x).ticks(10).tickSize(0))
+          .selectAll("text")
+          .attr("fill", "rgba(231,236,255,0.85)");
+
+        g.append("g")
+          .call(d3.axisLeft(y).ticks(8).tickSize(0))
+          .selectAll("text")
+          .attr("fill", "rgba(231,236,255,0.85)");
+
+        // Labels
+        g.append("text")
+          .attr("x", innerW / 2)
+          .attr("y", innerH + 44)
+          .attr("text-anchor", "middle")
+          .attr("fill", "rgba(231,236,255,0.9)")
+          .attr("font-size", 12)
+          .text("Longitude (deg)");
+
+        g.append("text")
+          .attr("transform", "rotate(-90)")
+          .attr("x", -innerH / 2)
+          .attr("y", -56)
+          .attr("text-anchor", "middle")
+          .attr("fill", "rgba(231,236,255,0.9)")
+          .attr("font-size", 12)
+          .text("Altitude (m)");
+
+        // Normalized regression (xNorm=lon, yNorm=alt).
+        const xmin = lonExtent[0];
+        const xmax = lonExtent[1];
+        const ymin = altExtent[0];
+        const ymax = altExtent[1];
+        const denomX = xmax - xmin;
+        const denomY = ymax - ymin;
+
+        let slope = 0;
+        let intercept = 0;
+
+        if (denomX !== 0 && denomY !== 0) {
+          const xnArr = [];
+          const ynArr = [];
+          for (const p of points) {
+            const xn = (p.lon - xmin) / denomX;
+            const yn = (p.alt - ymin) / denomY;
+            if (!Number.isFinite(xn) || !Number.isFinite(yn)) continue;
+            xnArr.push(xn);
+            ynArr.push(yn);
+          }
+
+          if (xnArr.length >= 2) {
+            const meanX = d3.mean(xnArr);
+            const meanY = d3.mean(ynArr);
+            const varX = d3.mean(xnArr.map((v) => (v - meanX) * (v - meanX)));
+            const covXY = d3.mean(xnArr.map((v, i) => (v - meanX) * (ynArr[i] - meanY)));
+
+            if (varX !== 0) {
+              slope = covXY / varX;
+              intercept = meanY - slope * meanX;
+            } else {
+              slope = 0;
+              intercept = meanY;
+            }
+          }
+        }
+
+        // yNormHat = slope*xNorm + intercept
+        const xNorm0 = denomX === 0 ? 0 : 0;
+        const xNorm1 = denomX === 0 ? 1 : 1;
+        const yNorm0 = denomY === 0 ? 0 : slope * xNorm0 + intercept;
+        const yNorm1 = denomY === 0 ? 0 : slope * xNorm1 + intercept;
+
+        const y0 = denomY === 0 ? ymin : yNorm0 * denomY + ymin;
+        const y1 = denomY === 0 ? ymin : yNorm1 * denomY + ymin;
+
+        g.append("line")
+          .attr("x1", x(xmin))
+          .attr("y1", y(y0))
+          .attr("x2", x(xmax))
+          .attr("y2", y(y1))
+          .attr("stroke", "rgba(255,255,255,0.85)")
+          .attr("stroke-width", 2)
+          .attr("stroke-dasharray", "6 5");
+
+        // Scatter points
+        g.append("g")
+          .selectAll("circle")
+          .data(points)
+          .enter()
+          .append("circle")
+          .attr("cx", (d) => x(d.lon))
+          .attr("cy", (d) => y(d.alt))
+          .attr("r", 3)
+          .attr("fill", (d) => colorByDistance(d.distFromFirstMeters === null ? distMin : d.distFromFirstMeters))
+          .attr("opacity", 0.82)
+          .attr("stroke", "rgba(255,255,255,0.12)")
+          .on("mouseenter", function (event, d) {
+            setSelected(d);
+            graphTooltip.innerHTML = `
+              <div><b>Longitude</b>: ${fmtNum(d.lon, 6)}</div>
+              <div><b>Altitude</b>: ${fmtNum(d.alt, 3)} m</div>
+              <div><b>Distance from first</b>: ${
+                d.distFromFirstMeters === null ? "-" : fmtNum(d.distFromFirstMeters, 2) + " m"
+              }</div>
+              <div><b>Δ Alt (m) vs first</b>: ${
+                d.deltaAltMeters === null ? "-" : fmtNum(d.deltaAltMeters, 2) + " m"
+              }</div>
+              <div><b>UnixTimeMillis</b>: ${
+                d.unixTimeMillis === null ? "-" : fmtNum(d.unixTimeMillis, 0)
+              }</div>
+              <div><b>ISO (UTC)</b>: ${
+                d.unixTimeMillis === null ? "-" : fmtISOFromMillis(d.unixTimeMillis)
+              }</div>
+            `;
+            graphTooltip.style.display = "block";
+            graphTooltip.style.left = `${event.clientX + 12}px`;
+            graphTooltip.style.top = `${event.clientY + 12}px`;
+            d3.select(this).attr("stroke-width", 2).attr("stroke", "rgba(255,255,255,0.65)");
+          })
+          .on("mousemove", function (event) {
+            graphTooltip.style.left = `${event.clientX + 12}px`;
+            graphTooltip.style.top = `${event.clientY + 12}px`;
+          })
+          .on("mouseleave", function () {
+            graphTooltip.style.display = "none";
+            d3.select(this).attr("stroke-width", 0).attr("stroke", "rgba(255,255,255,0.12)");
+          });
+
+        graphTooltip.style.display = "none";
       }
 
       async function loadDefaultText() {
