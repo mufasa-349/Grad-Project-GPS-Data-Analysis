@@ -125,6 +125,21 @@
         background: rgba(255, 255, 255, 0.06);
       }
 
+      select {
+        width: 100%;
+        background: transparent;
+        color: var(--text);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 10px;
+        padding: 8px 10px;
+        outline: none;
+      }
+
+      option {
+        background: #0b1020;
+        color: var(--text);
+      }
+
       .small {
         font-size: 12px;
         color: var(--muted);
@@ -245,7 +260,21 @@
         </div>
 
         <div class="section">
-          <button class="btn" id="reloadBtn" type="button">Reload default file</button>
+          <div class="row">
+            <div class="k">Data source</div>
+            <div class="v">
+              <select id="fileSelect">
+                <option value="./gnss_log_2026_03_23_10_52_08_FixOnly.txt" selected>
+                  Tuzla FixOnly
+                </option>
+                <option value="./gnss_fix_combined_sorted_by_unixTimeMillis_2026_03_24.txt">
+                  Combined Fix (sorted by UnixTimeMillis)
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <button class="btn" id="reloadBtn" type="button">Reload selected file</button>
           <div id="manualLoadWrap">
             <div style="margin-top: 10px" class="small">Fallback: choose a file manually</div>
             <input id="manualFile" type="file" accept=".txt,text/plain" />
@@ -293,6 +322,7 @@
         selBearing: document.getElementById("selBearing"),
         selUnix: document.getElementById("selUnix"),
         selISO: document.getElementById("selISO"),
+        fileSelect: document.getElementById("fileSelect"),
         reloadBtn: document.getElementById("reloadBtn"),
         manualLoadWrap: document.getElementById("manualLoadWrap"),
         manualFile: document.getElementById("manualFile"),
@@ -759,7 +789,8 @@
         clearError();
 
         try {
-          const res = await fetch(DEFAULT_DATA_PATH, { cache: "no-store" });
+          const dataPath = ui.fileSelect ? ui.fileSelect.value : DEFAULT_DATA_PATH;
+          const res = await fetch(dataPath, { cache: "no-store" });
           if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
           const text = await res.text();
           const points = parseFixOnlyText(text);
@@ -768,12 +799,14 @@
           const hint =
             "The browser may have blocked loading the local file (fetch from file:// or missing local server). " +
             "Please open this HTML via a local web server (e.g., Python http.server) OR use the manual fallback.";
-          setError(`Could not load ${DEFAULT_DATA_PATH}.\n\n${err}\n\n${hint}`);
+          const dataPath = ui.fileSelect ? ui.fileSelect.value : DEFAULT_DATA_PATH;
+          setError(`Could not load ${dataPath}.\n\n${err}\n\n${hint}`);
           ui.manualLoadWrap.style.display = "block";
         }
       }
 
       ui.reloadBtn.addEventListener("click", loadDefaultText);
+      if (ui.fileSelect) ui.fileSelect.addEventListener("change", loadDefaultText);
 
       ui.manualFile.addEventListener("change", async (e) => {
         const file = e.target.files && e.target.files[0];
