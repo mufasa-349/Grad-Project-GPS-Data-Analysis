@@ -402,12 +402,12 @@
 
       const map = L.map("map", { zoomControl: true, preferCanvas: true }).setView(
         [DEFAULT_CENTER.lat, DEFAULT_CENTER.lon],
-        14
+        17
       );
 
       // Base map tiles
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
+        maxZoom: 22,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(map);
 
@@ -524,7 +524,8 @@
 
         if (points.length > 0) {
           const bounds = L.latLngBounds(points.map((d) => [d.lat, d.lon]));
-          map.fitBounds(bounds.pad(0.08));
+          // Keep the view very tight around pins; allow maximum zoom for detail.
+          map.fitBounds(bounds.pad(0.005), { maxZoom: 21 });
         }
 
         const radiusForAccuracy = (a) => {
