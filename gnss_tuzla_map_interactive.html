@@ -4,10 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>GNSS Fix Pins (Tuzla) - Interactive</title>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
-    />
+    <link rel="stylesheet" href="./vendor/leaflet.css" />
     <style>
       :root {
         --bg: #0b1020;
@@ -170,8 +167,8 @@
     </style>
 
     <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="./vendor/d3.min.js"></script>
+    <script src="./vendor/leaflet.js"></script>
   </head>
   <body>
     <div class="layout">
@@ -267,9 +264,23 @@
                 <option value="./gnss_log_2026_03_23_10_52_08_FixOnly.txt" selected>
                   Tuzla FixOnly
                 </option>
+                <option value="./spor merkezi_FixOnly.txt">Spor Merkezi FixOnly</option>
+                <option value="./uc onu_FixOnly.txt">Üç Önü FixOnly</option>
+                <option value="./yuruyuske_FixOnly.txt">Yürüyüşke FixOnly</option>
                 <option value="./gnss_fix_combined_sorted_by_unixTimeMillis_2026_03_24.txt">
                   Combined Fix (sorted by UnixTimeMillis)
                 </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="k">Visualization method</div>
+            <div class="v">
+              <select id="vizMethod">
+                <option value="original" selected>Original (Without Uncertanity)</option>
+                <option value="heatmap">Heat Map our idea</option>
+                <option value="tbd">To be determined</option>
               </select>
             </div>
           </div>
@@ -323,6 +334,7 @@
         selUnix: document.getElementById("selUnix"),
         selISO: document.getElementById("selISO"),
         fileSelect: document.getElementById("fileSelect"),
+        vizMethod: document.getElementById("vizMethod"),
         reloadBtn: document.getElementById("reloadBtn"),
         manualLoadWrap: document.getElementById("manualLoadWrap"),
         manualFile: document.getElementById("manualFile"),
@@ -406,10 +418,14 @@
       );
 
       // Base map tiles
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 22,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      }).addTo(map);
+      const shouldLoadTiles = typeof navigator !== "undefined" ? navigator.onLine : true;
+      if (shouldLoadTiles) {
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 22,
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
+      }
 
       let layerGroup = L.layerGroup().addTo(map);
 
@@ -791,7 +807,9 @@
 
         try {
           const dataPath = ui.fileSelect ? ui.fileSelect.value : DEFAULT_DATA_PATH;
-          const res = await fetch(dataPath, { cache: "no-store" });
+          // Resolve relative paths safely (handles spaces and special chars).
+          const dataUrl = new URL(dataPath, window.location.href).toString();
+          const res = await fetch(dataUrl, { cache: "no-store" });
           if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
           const text = await res.text();
           const points = parseFixOnlyText(text);
