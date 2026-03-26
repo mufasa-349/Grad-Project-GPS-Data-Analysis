@@ -285,6 +285,14 @@
             </div>
           </div>
 
+          <div class="row">
+            <div class="k">Heatmap cell size (px)</div>
+            <div class="v">
+              <input id="heatCellSize" type="range" min="4" max="40" step="1" value="16" />
+              <div class="small" id="heatCellSizeLabel" style="margin-top: 4px; text-align: right">16</div>
+            </div>
+          </div>
+
           <button class="btn" id="reloadBtn" type="button">Reload selected file</button>
           <div id="manualLoadWrap">
             <div style="margin-top: 10px" class="small">Fallback: choose a file manually</div>
@@ -335,6 +343,8 @@
         selISO: document.getElementById("selISO"),
         fileSelect: document.getElementById("fileSelect"),
         vizMethod: document.getElementById("vizMethod"),
+        heatCellSize: document.getElementById("heatCellSize"),
+        heatCellSizeLabel: document.getElementById("heatCellSizeLabel"),
         reloadBtn: document.getElementById("reloadBtn"),
         manualLoadWrap: document.getElementById("manualLoadWrap"),
         manualFile: document.getElementById("manualFile"),
@@ -517,6 +527,132 @@
           p.deltaLonDegrees = p.lon - baseline.lon;
         }
       }
+
+      const GridHeatLayer = L.Layer.extend({
+        initialize: function (points, opts) {
+          this._points = points || [];
+          this._center = opts.center; // {lat, lon}
+          this._radiusMeters = opts.radiusMeters;
+          this._opts = Object.assign(
+            {
+              cellPx: 10,
+              power: 0.65,
+              baseAlpha: 0.05,
+              maxAlpha: 0.90,
+              colorRgb: [43, 92, 255],
+            },
+            opts || {}
+          );
+        },
+        setData: function (points, center, radiusMeters) {
+          this._points = points || [];
+          this._center = center;
+          this._radiusMeters = radiusMeters;
+          this.redraw();
+        },
+        onAdd: function (map) {
+          this._map = map;
+          this._canvas = L.DomUtil.create("canvas", "leaflet-grid-heat-canvas");
+          this._canvas.style.position = "absolute";
+          this._canvas.style.left = "0";
+          this._canvas.style.top = "0";
+          this._canvas.style.pointerEvents = "none";
+          map.getContainer().appendChild(this._canvas);
+          this._ctx = this._canvas.getContext("2d", { alpha: true });
+
+          this._onMove = () => this.redraw();
+          this._onResize = () => this.redraw();
+          map.on("move zoom", this._onMove);
+          map.on("resize", this._onResize);
+          this.redraw();
+        },
+        onRemove: function (map) {
+          map.off("move zoom", this._onMove);
+          map.off("resize", this._onResize);
+          if (this._canvas && this._canvas.parentNode) this._canvas.parentNode.removeChild(this._canvas);
+          this._map = null;
+          this._canvas = null;
+          this._ctx = null;
+        },
+        redraw: function () {
+          if (!this._map || !this._ctx || !this._canvas) return;
+          if (!this._center || !Number.isFinite(this._radiusMeters)) return;
+
+          const size = this._map.getSize();
+          const dpr = window.devicePixelRatio || 1;
+          const w = Math.max(1, Math.floor(size.x));
+          const h = Math.max(1, Math.floor(size.y));
+
+          if (this._canvas.width !== Math.floor(w * dpr) || this._canvas.height !== Math.floor(h * dpr)) {
+            this._canvas.width = Math.floor(w * dpr);
+            this._canvas.height = Math.floor(h * dpr);
+            this._canvas.style.width = `${w}px`;
+            this._canvas.style.height = `${h}px`;
+          }
+
+          const ctx = this._ctx;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.clearRect(0, 0, w, h);
+
+          const centerLL = L.latLng(this._center.lat, this._center.lon);
+          const centerPt = this._map.latLngToContainerPoint(centerLL);
+
+          const edgeLL = L.latLng(this._center.lat + metersToLatDegrees(this._radiusMeters), this._center.lon);
+          const edgePt = this._map.latLngToContainerPoint(edgeLL);
+          const radiusPx = Math.max(2, centerPt.distanceTo(edgePt));
+
+          // Clip to the enclosing circle.
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(centerPt.x, centerPt.y, radiusPx, 0, Math.PI * 2);
+          ctx.clip();
+
+          const cell = Math.max(4, Math.floor(this._opts.cellPx));
+          const cols = Math.ceil(w / cell);
+          const rows = Math.ceil(h / cell);
+          const counts = new Uint32Array(cols * rows);
+
+          // Bin points into grid cells (only within the circle).
+          for (const p of this._points) {
+            const pt = this._map.latLngToContainerPoint(L.latLng(p.lat, p.lon));
+            const dx = pt.x - centerPt.x;
+            const dy = pt.y - centerPt.y;
+            if (dx * dx + dy * dy > radiusPx * radiusPx) continue;
+
+            const gx = Math.min(cols - 1, Math.max(0, Math.floor(pt.x / cell)));
+            const gy = Math.min(rows - 1, Math.max(0, Math.floor(pt.y / cell)));
+            counts[gy * cols + gx] += 1;
+          }
+
+          // Max for normalization.
+          let maxC = 0;
+          for (let i = 0; i < counts.length; i++) if (counts[i] > maxC) maxC = counts[i];
+          if (maxC === 0) {
+            ctx.restore();
+            return;
+          }
+
+          const power = Math.max(0.2, Math.min(2.0, this._opts.power));
+          const baseA = Math.max(0, Math.min(1, this._opts.baseAlpha));
+          const maxA = Math.max(0, Math.min(1, this._opts.maxAlpha));
+          const rgb = this._opts.colorRgb || [43, 92, 255];
+
+          // Draw cells with alpha by normalized count.
+          for (let gy = 0; gy < rows; gy++) {
+            const y = gy * cell;
+            for (let gx = 0; gx < cols; gx++) {
+              const c = counts[gy * cols + gx];
+              if (c === 0) continue;
+              const t = Math.pow(c / maxC, power);
+              const a = Math.max(baseA, Math.min(maxA, baseA + (maxA - baseA) * t));
+              ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
+              ctx.fillRect(gx * cell, y, cell, cell);
+            }
+          }
+
+          ctx.restore();
+        },
+      });
 
       const DensityHeatLayer = L.Layer.extend({
         initialize: function (points, opts) {
@@ -849,60 +985,25 @@
           interactive: false,
         }).addTo(map);
 
-        // Density/heat rendering disabled: show points with blue intensity decreasing by distance to mean center.
+        // Grid heatmap (stable): bin points into pixels and shade by count.
         if (heatLayer) {
           map.removeLayer(heatLayer);
           heatLayer = null;
         }
 
-        const blue = "rgba(43,92,255,1)";
-        const stroke = "rgba(255,255,255,0.35)";
-        const minOp = 0.08;
-        const maxOp = 0.92;
+        const cellPxRaw = ui.heatCellSize ? Number(ui.heatCellSize.value) : 16;
+        const cellPx = Number.isFinite(cellPxRaw) ? cellPxRaw : 16;
 
-        for (const p of points) {
-          const d = haversineMeters(center.lat, center.lon, p.lat, p.lon);
-          const t = radiusMeters <= 0 ? 0 : Math.min(1, Math.max(0, d / radiusMeters));
-          // farther => lower opacity
-          const op = Math.max(minOp, Math.min(maxOp, maxOp - (maxOp - minOp) * t));
-
-          const marker = L.circleMarker([p.lat, p.lon], {
-            radius: 4,
-            color: stroke,
-            weight: 1,
-            fillColor: blue,
-            fillOpacity: op,
-          });
-
-          const popupHtml = `
-            <div class="tooltip">
-              <div><b>Latitude</b>: ${fmtNum(p.lat, 6)}</div>
-              <div><b>Longitude</b>: ${fmtNum(p.lon, 6)}</div>
-              <div><b>Altitude</b>: ${fmtNum(p.alt, 3)} m</div>
-              <div><b>Distance to mean center</b>: ${fmtNum(d, 2)} m</div>
-              <div><b>Distance from first</b>: ${
-                p.distFromFirstMeters === null ? "-" : fmtNum(p.distFromFirstMeters, 2) + " m"
-              }</div>
-              <div><b>AccuracyMeters</b>: ${p.accuracy === null ? "-" : fmtNum(p.accuracy, 3) + " m"}</div>
-              <div><b>UnixTimeMillis</b>: ${p.unixTimeMillis === null ? "-" : fmtNum(p.unixTimeMillis, 0)}</div>
-              <div><b>ISO (UTC)</b>: ${p.unixTimeMillis === null ? "-" : fmtISOFromMillis(p.unixTimeMillis)}</div>
-            </div>
-          `;
-          marker.bindPopup(popupHtml, { maxWidth: 320 });
-          marker.on("mouseover", () => {
-            setSelected(p);
-            marker.setStyle({ weight: 2, fillOpacity: Math.min(0.98, op + 0.12) });
-          });
-          marker.on("mouseout", () => {
-            marker.setStyle({ weight: 1, fillOpacity: op });
-          });
-          marker.on("click", () => {
-            marker.openPopup();
-            setSelected(p);
-          });
-
-          layerGroup.addLayer(marker);
-        }
+        heatLayer = new GridHeatLayer(points, {
+          center,
+          radiusMeters,
+          cellPx,
+          power: 0.65,
+          baseAlpha: 0.02,
+          maxAlpha: 0.92,
+          colorRgb: [43, 92, 255],
+        });
+        heatLayer.addTo(map);
 
         // In heatmap mode, center the camera on the computed circle (not on raw point bounds).
         const cb = heatCircle.getBounds();
@@ -1118,6 +1219,16 @@
       ui.reloadBtn.addEventListener("click", loadDefaultText);
       if (ui.fileSelect) ui.fileSelect.addEventListener("change", loadDefaultText);
       if (ui.vizMethod) ui.vizMethod.addEventListener("change", () => render(lastPoints));
+      if (ui.heatCellSize) {
+        const sync = () => {
+          if (ui.heatCellSizeLabel) ui.heatCellSizeLabel.textContent = String(ui.heatCellSize.value);
+        };
+        ui.heatCellSize.addEventListener("input", () => {
+          sync();
+          if (ui.vizMethod && ui.vizMethod.value === "heatmap") render(lastPoints);
+        });
+        sync();
+      }
 
       ui.manualFile.addEventListener("change", async (e) => {
         const file = e.target.files && e.target.files[0];
