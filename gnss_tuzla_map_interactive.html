@@ -517,6 +517,31 @@
         return m / 111320;
       }
 
+      // Destination point on a sphere given start, bearing (deg), distance (m).
+      function destinationLatLon(lat, lon, bearingDeg, distanceMeters) {
+        const R = 6371000;
+        const toRad = (deg) => (deg * Math.PI) / 180;
+        const toDeg = (rad) => (rad * 180) / Math.PI;
+        const brng = toRad(bearingDeg);
+        const d = distanceMeters / R;
+        const lat1 = toRad(lat);
+        const lon1 = toRad(lon);
+
+        const sinLat1 = Math.sin(lat1);
+        const cosLat1 = Math.cos(lat1);
+        const sinD = Math.sin(d);
+        const cosD = Math.cos(d);
+
+        const lat2 = Math.asin(sinLat1 * cosD + cosLat1 * sinD * Math.cos(brng));
+        const lon2 =
+          lon1 +
+          Math.atan2(
+            Math.sin(brng) * sinD * cosLat1,
+            cosD - sinLat1 * Math.sin(lat2)
+          );
+        return { lat: toDeg(lat2), lon: ((toDeg(lon2) + 540) % 360) - 180 };
+      }
+
       function ensureDerivedMetrics(points) {
         if (!points || points.length === 0) return;
         const baseline = points[0];
@@ -557,6 +582,7 @@
           this._canvas.style.left = "0";
           this._canvas.style.top = "0";
           this._canvas.style.pointerEvents = "none";
+          this._canvas.style.zIndex = "600";
           map.getContainer().appendChild(this._canvas);
           this._ctx = this._canvas.getContext("2d", { alpha: true });
 
@@ -597,8 +623,9 @@
           const centerLL = L.latLng(this._center.lat, this._center.lon);
           const centerPt = this._map.latLngToContainerPoint(centerLL);
 
-          const edgeLL = L.latLng(this._center.lat + metersToLatDegrees(this._radiusMeters), this._center.lon);
-          const edgePt = this._map.latLngToContainerPoint(edgeLL);
+          // Compute pixel radius using a true destination point to match Leaflet's circle better.
+          const dest = destinationLatLon(this._center.lat, this._center.lon, 0, this._radiusMeters);
+          const edgePt = this._map.latLngToContainerPoint(L.latLng(dest.lat, dest.lon));
           const radiusPx = Math.max(2, centerPt.distanceTo(edgePt));
 
           // Clip to the enclosing circle.
@@ -633,8 +660,13 @@
           }
 
           const power = Math.max(0.2, Math.min(2.0, this._opts.power));
-          const baseA = Math.max(0, Math.min(1, this._opts.baseAlpha));
-          const maxA = Math.max(0, Math.min(1, this._opts.maxAlpha));
+          // When zooming out, the heatmap can become visually too faint. Boost alpha for small on-screen radii.
+          const zoomBoost = (() => {
+            const t = Math.max(0, Math.min(1, radiusPx / 220)); // ~0 when very zoomed out
+            return 1 + 0.9 * (1 - t);
+          })();
+          const baseA = Math.max(0, Math.min(1, (this._opts.baseAlpha ?? 0.1) * zoomBoost));
+          const maxA = Math.max(0, Math.min(1, (this._opts.maxAlpha ?? 0.95) * zoomBoost));
           const rgb = this._opts.colorRgb || [43, 92, 255];
 
           // Draw cells with alpha by normalized count.
@@ -999,7 +1031,7 @@
           radiusMeters,
           cellPx,
           power: 0.65,
-          baseAlpha: 0.02,
+          baseAlpha: 0.10,
           maxAlpha: 0.92,
           colorRgb: [43, 92, 255],
         });
