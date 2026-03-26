@@ -428,6 +428,9 @@
       }
 
       let layerGroup = L.layerGroup().addTo(map);
+      let heatLayer = null;
+      let heatCircle = null;
+      let lastPoints = [];
 
       function setError(msg) {
         ui.errorBox.style.display = "block";
@@ -486,11 +489,218 @@
         return R * c;
       }
 
+      function meanLatLon(points) {
+        let n = 0;
+        let sumLat = 0;
+        let sumLon = 0;
+        for (const p of points) {
+          if (!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) continue;
+          sumLat += p.lat;
+          sumLon += p.lon;
+          n += 1;
+        }
+        if (n === 0) return null;
+        return { lat: sumLat / n, lon: sumLon / n };
+      }
+
+      function metersToLatDegrees(m) {
+        return m / 111320;
+      }
+
+      function ensureDerivedMetrics(points) {
+        if (!points || points.length === 0) return;
+        const baseline = points[0];
+        for (const p of points) {
+          p.distFromFirstMeters = haversineMeters(baseline.lat, baseline.lon, p.lat, p.lon);
+          p.deltaAltMeters = p.alt - baseline.alt;
+          p.deltaLatDegrees = p.lat - baseline.lat;
+          p.deltaLonDegrees = p.lon - baseline.lon;
+        }
+      }
+
+      const DensityHeatLayer = L.Layer.extend({
+        initialize: function (points, opts) {
+          this._points = points || [];
+          this._center = opts.center; // {lat, lon}
+          this._radiusMeters = opts.radiusMeters;
+          this._opts = Object.assign(
+            {
+              gridStepPx: 6,
+              sigmaPx: 18,
+              power: 0.6,
+            },
+            opts || {}
+          );
+        },
+        setData: function (points, center, radiusMeters) {
+          this._points = points || [];
+          this._center = center;
+          this._radiusMeters = radiusMeters;
+          this.redraw();
+        },
+        onAdd: function (map) {
+          this._map = map;
+          this._canvas = L.DomUtil.create("canvas", "leaflet-heat-canvas");
+          this._canvas.style.position = "absolute";
+          this._canvas.style.left = "0";
+          this._canvas.style.top = "0";
+          this._canvas.style.pointerEvents = "none";
+          // Attach to the map container so it's in the same (non-transformed) pixel coordinate space
+          // as `latLngToContainerPoint`, avoiding pane transform drift.
+          map.getContainer().appendChild(this._canvas);
+
+          this._ctx = this._canvas.getContext("2d", { alpha: true, willReadFrequently: false });
+
+          this._onMove = () => this.redraw();
+          this._onResize = () => this.redraw();
+          map.on("move zoom", this._onMove);
+          map.on("resize", this._onResize);
+          this.redraw();
+        },
+        onRemove: function (map) {
+          map.off("move zoom", this._onMove);
+          map.off("resize", this._onResize);
+          if (this._canvas && this._canvas.parentNode) this._canvas.parentNode.removeChild(this._canvas);
+          this._map = null;
+          this._canvas = null;
+          this._ctx = null;
+        },
+        redraw: function () {
+          if (!this._map || !this._ctx || !this._canvas) return;
+          if (!this._center || !Number.isFinite(this._radiusMeters)) return;
+
+          const size = this._map.getSize();
+          const dpr = window.devicePixelRatio || 1;
+          const w = Math.max(1, Math.floor(size.x));
+          const h = Math.max(1, Math.floor(size.y));
+
+          if (this._canvas.width !== Math.floor(w * dpr) || this._canvas.height !== Math.floor(h * dpr)) {
+            this._canvas.width = Math.floor(w * dpr);
+            this._canvas.height = Math.floor(h * dpr);
+            this._canvas.style.width = `${w}px`;
+            this._canvas.style.height = `${h}px`;
+          }
+
+          const ctx = this._ctx;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.clearRect(0, 0, w, h);
+
+          const centerLL = L.latLng(this._center.lat, this._center.lon);
+          const centerPt = this._map.latLngToContainerPoint(centerLL);
+          const edgeLL = L.latLng(this._center.lat + metersToLatDegrees(this._radiusMeters), this._center.lon);
+          const edgePt = this._map.latLngToContainerPoint(edgeLL);
+          const radiusPx = Math.max(2, centerPt.distanceTo(edgePt));
+
+          // Clip to the "one big dot" that covers all locations.
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(centerPt.x, centerPt.y, radiusPx, 0, Math.PI * 2);
+          ctx.clip();
+
+          const step = Math.max(2, this._opts.gridStepPx);
+          const cols = Math.ceil(w / step);
+          const rows = Math.ceil(h / step);
+          const grid = new Float32Array(cols * rows);
+
+          const sigma = Math.max(6, this._opts.sigmaPx);
+          const r = Math.ceil(sigma * 3);
+          const rCells = Math.ceil(r / step);
+          const inv2s2 = 1 / (2 * sigma * sigma);
+
+          // Accumulate gaussian kernels into a coarse grid.
+          for (const p of this._points) {
+            const ll = L.latLng(p.lat, p.lon);
+            const pt = this._map.latLngToContainerPoint(ll);
+            const dx0 = pt.x - centerPt.x;
+            const dy0 = pt.y - centerPt.y;
+            if (dx0 * dx0 + dy0 * dy0 > radiusPx * radiusPx) continue;
+
+            const cx = Math.floor(pt.x / step);
+            const cy = Math.floor(pt.y / step);
+
+            for (let gy = cy - rCells; gy <= cy + rCells; gy++) {
+              if (gy < 0 || gy >= rows) continue;
+              const py = (gy + 0.5) * step;
+              const dy = py - pt.y;
+              const dy2 = dy * dy;
+              for (let gx = cx - rCells; gx <= cx + rCells; gx++) {
+                if (gx < 0 || gx >= cols) continue;
+                const px = (gx + 0.5) * step;
+                const dx = px - pt.x;
+                const d2 = dx * dx + dy2;
+                if (d2 > r * r) continue;
+                grid[gy * cols + gx] += Math.exp(-d2 * inv2s2);
+              }
+            }
+          }
+
+          // Find max for normalization.
+          let maxV = 0;
+          for (let i = 0; i < grid.length; i++) if (grid[i] > maxV) maxV = grid[i];
+          if (maxV <= 0) {
+            ctx.restore();
+            // Outline even if empty.
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(centerPt.x, centerPt.y, radiusPx, 0, Math.PI * 2);
+            ctx.strokeStyle = "rgba(255,255,255,0.30)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+            return;
+          }
+
+          const img = ctx.createImageData(w, h);
+          const data = img.data;
+
+          // Palette: single-hue blue. Density drives alpha (darker = denser).
+          const blue = [43, 92, 255];
+          const power = Math.max(0.2, Math.min(2.0, this._opts.power));
+
+          for (let y = 0; y < h; y++) {
+            const gy = Math.min(rows - 1, Math.max(0, Math.floor(y / step)));
+            for (let x = 0; x < w; x++) {
+              const gx = Math.min(cols - 1, Math.max(0, Math.floor(x / step)));
+              const v = grid[gy * cols + gx] / maxV;
+              if (v <= 0) continue;
+
+              const t = Math.pow(v, power);
+              const rch = blue[0];
+              const gch = blue[1];
+              const bch = blue[2];
+              const a = Math.round(255 * Math.min(0.95, 0.08 + 0.87 * t));
+
+              const idx = (y * w + x) * 4;
+              data[idx + 0] = rch;
+              data[idx + 1] = gch;
+              data[idx + 2] = bch;
+              data[idx + 3] = a;
+            }
+          }
+
+          ctx.putImageData(img, 0, 0);
+          ctx.restore();
+        },
+      });
+
       function render(points) {
+        lastPoints = points || [];
         layerGroup.clearLayers();
+        if (heatLayer) {
+          map.removeLayer(heatLayer);
+          heatLayer = null;
+        }
+        if (heatCircle) {
+          map.removeLayer(heatCircle);
+          heatCircle = null;
+        }
         clearError();
 
         ui.count.textContent = String(points.length);
+
+        ensureDerivedMetrics(points);
+
+        const method = ui.vizMethod ? ui.vizMethod.value : "original";
 
         // Color: blue (close) -> red (far), based on distance from the first fix.
         let colorByDistance = () => "rgba(43,91,255,0.8)";
@@ -511,16 +721,6 @@
         ui.altRange.textContent = `${fmtNum(altExtent[0], 3)} / ${fmtNum(altExtent[1], 3)}`;
 
         if (points.length > 0) {
-          const baseline = points[0];
-
-          // Compute distance and coordinate/altitude deltas vs the first fix.
-          for (const p of points) {
-            p.distFromFirstMeters = haversineMeters(baseline.lat, baseline.lon, p.lat, p.lon);
-            p.deltaAltMeters = p.alt - baseline.alt;
-            p.deltaLatDegrees = p.lat - baseline.lat;
-            p.deltaLonDegrees = p.lon - baseline.lon;
-          }
-
           const distVals = points
             .map((d) => d.distFromFirstMeters)
             .filter((v) => v !== null && Number.isFinite(v));
@@ -536,6 +736,15 @@
             .domain([distMin, distMax]);
         } else {
           ui.distRange.textContent = "-";
+        }
+
+        if (method === "heatmap") {
+          renderHeat(points, { colorByDistance, hasAcc });
+          if (points.length > 0) {
+            setSelected(points[0]);
+            renderCoordGraph(points);
+          }
+          return;
         }
 
         if (points.length > 0) {
@@ -616,6 +825,88 @@
           setSelected(points[0]);
           renderCoordGraph(points);
         }
+      }
+
+      function renderHeat(points, ctx) {
+        layerGroup.clearLayers();
+        if (!points || points.length === 0) return;
+
+        const center = meanLatLon(points) || { lat: points[0].lat, lon: points[0].lon };
+        let radiusMeters = 0;
+        for (const p of points) {
+          const d = haversineMeters(center.lat, center.lon, p.lat, p.lon);
+          if (d > radiusMeters) radiusMeters = d;
+        }
+        // A tiny padding so the circle clearly contains all samples.
+        radiusMeters = Math.max(1.5, radiusMeters * 1.08);
+
+        heatCircle = L.circle([center.lat, center.lon], {
+          radius: radiusMeters,
+          color: "rgba(43,92,255,0.75)",
+          weight: 2,
+          fillColor: "rgba(43,92,255,0.20)",
+          fillOpacity: 0.20,
+          interactive: false,
+        }).addTo(map);
+
+        // Density/heat rendering disabled: show points with blue intensity decreasing by distance to mean center.
+        if (heatLayer) {
+          map.removeLayer(heatLayer);
+          heatLayer = null;
+        }
+
+        const blue = "rgba(43,92,255,1)";
+        const stroke = "rgba(255,255,255,0.35)";
+        const minOp = 0.08;
+        const maxOp = 0.92;
+
+        for (const p of points) {
+          const d = haversineMeters(center.lat, center.lon, p.lat, p.lon);
+          const t = radiusMeters <= 0 ? 0 : Math.min(1, Math.max(0, d / radiusMeters));
+          // farther => lower opacity
+          const op = Math.max(minOp, Math.min(maxOp, maxOp - (maxOp - minOp) * t));
+
+          const marker = L.circleMarker([p.lat, p.lon], {
+            radius: 4,
+            color: stroke,
+            weight: 1,
+            fillColor: blue,
+            fillOpacity: op,
+          });
+
+          const popupHtml = `
+            <div class="tooltip">
+              <div><b>Latitude</b>: ${fmtNum(p.lat, 6)}</div>
+              <div><b>Longitude</b>: ${fmtNum(p.lon, 6)}</div>
+              <div><b>Altitude</b>: ${fmtNum(p.alt, 3)} m</div>
+              <div><b>Distance to mean center</b>: ${fmtNum(d, 2)} m</div>
+              <div><b>Distance from first</b>: ${
+                p.distFromFirstMeters === null ? "-" : fmtNum(p.distFromFirstMeters, 2) + " m"
+              }</div>
+              <div><b>AccuracyMeters</b>: ${p.accuracy === null ? "-" : fmtNum(p.accuracy, 3) + " m"}</div>
+              <div><b>UnixTimeMillis</b>: ${p.unixTimeMillis === null ? "-" : fmtNum(p.unixTimeMillis, 0)}</div>
+              <div><b>ISO (UTC)</b>: ${p.unixTimeMillis === null ? "-" : fmtISOFromMillis(p.unixTimeMillis)}</div>
+            </div>
+          `;
+          marker.bindPopup(popupHtml, { maxWidth: 320 });
+          marker.on("mouseover", () => {
+            setSelected(p);
+            marker.setStyle({ weight: 2, fillOpacity: Math.min(0.98, op + 0.12) });
+          });
+          marker.on("mouseout", () => {
+            marker.setStyle({ weight: 1, fillOpacity: op });
+          });
+          marker.on("click", () => {
+            marker.openPopup();
+            setSelected(p);
+          });
+
+          layerGroup.addLayer(marker);
+        }
+
+        // In heatmap mode, center the camera on the computed circle (not on raw point bounds).
+        const cb = heatCircle.getBounds();
+        map.fitBounds(cb.pad(0.12), { maxZoom: 21 });
       }
 
       function renderCoordGraph(points) {
@@ -826,6 +1117,7 @@
 
       ui.reloadBtn.addEventListener("click", loadDefaultText);
       if (ui.fileSelect) ui.fileSelect.addEventListener("change", loadDefaultText);
+      if (ui.vizMethod) ui.vizMethod.addEventListener("change", () => render(lastPoints));
 
       ui.manualFile.addEventListener("change", async (e) => {
         const file = e.target.files && e.target.files[0];
