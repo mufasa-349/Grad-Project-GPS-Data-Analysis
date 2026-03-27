@@ -186,6 +186,11 @@
         </div>
 
         <div class="row">
+          <div class="k">Current preview radius (m)</div>
+          <div class="v" id="previewRadius">-</div>
+        </div>
+
+        <div class="row">
           <div class="k">AccuracyMeters range (m)</div>
           <div class="v" id="accRange">-</div>
         </div>
@@ -326,6 +331,7 @@
       const ui = {
         count: document.getElementById("count"),
         distRange: document.getElementById("distRange"),
+        previewRadius: document.getElementById("previewRadius"),
         accRange: document.getElementById("accRange"),
         lonRange: document.getElementById("lonRange"),
         altRange: document.getElementById("altRange"),
@@ -1223,6 +1229,7 @@
             if (lastPreviewIdx === idx) return;
             lastPreviewIdx = idx;
             routePreviewGroup.clearLayers();
+            if (ui.previewRadius) ui.previewRadius.textContent = "-";
 
             const start = Math.max(0, idx - halfWindow);
             const end = Math.min(points.length - 1, idx + halfWindow);
@@ -1234,6 +1241,7 @@
               if (d > radiusW) radiusW = d;
             }
             radiusW = Math.max(1.5, radiusW * 1.08);
+            if (ui.previewRadius) ui.previewRadius.textContent = `${fmtNum(radiusW, 2)} m`;
 
             const c = L.circle([centerW.lat, centerW.lon], {
               radius: radiusW,
@@ -1285,11 +1293,13 @@
             else {
               routePreviewGroup.clearLayers();
               lastPreviewIdx = null;
+              if (ui.previewRadius) ui.previewRadius.textContent = "-";
             }
           };
           routeMouseOutHandler = () => {
             routePreviewGroup.clearLayers();
             lastPreviewIdx = null;
+            if (ui.previewRadius) ui.previewRadius.textContent = "-";
           };
           map.on("mousemove", routeMouseMoveHandler);
           map.on("mouseout", routeMouseOutHandler);
@@ -1314,6 +1324,7 @@
         }
         routePreviewGroup.clearLayers();
         lastPreviewIdx = null;
+        if (ui.previewRadius) ui.previewRadius.textContent = "-";
         if (routeMouseMoveHandler) {
           map.off("mousemove", routeMouseMoveHandler);
           routeMouseMoveHandler = null;
