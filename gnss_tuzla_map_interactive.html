@@ -1169,9 +1169,9 @@
         const useSliding = shouldUseSlidingWindows(points, 30);
         if (useSliding) {
           // For moving datasets, skip the single large enclosing circle (it becomes meaningless).
-          // Walking dataset: multiple circles over time (window i-3..i+3), each heat uses only its own 7-point window.
-          const windows = buildSlidingWindows(points, 3);
-          const stride = 3; // reduce visual clutter while preserving motion trail
+          // Walking dataset: multiple circles over time (window i-7..i+7), each heat uses only its own time window.
+          const windows = buildSlidingWindows(points, 7);
+          const stride = 5; // reduce visual clutter while preserving motion trail
           let bounds = null;
           for (let k = 0; k < windows.length; k += stride) {
             const w = windows[k];
