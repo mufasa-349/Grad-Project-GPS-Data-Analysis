@@ -1154,15 +1154,6 @@
         // A tiny padding so the circle clearly contains all samples.
         radiusMeters = Math.max(1.5, radiusMeters * 1.08);
 
-        heatCircle = L.circle([center.lat, center.lon], {
-          radius: radiusMeters,
-          color: "rgba(43,92,255,0.75)",
-          weight: 2,
-          fillColor: "rgba(43,92,255,0.20)",
-          fillOpacity: 0.20,
-          interactive: false,
-        }).addTo(map);
-
         // Heat rendering mode:
         // - monoBlue: grid heatmap (blocky but very stable)
         // - bgr: marker-based soft heatmap (stable on pan/zoom, centered on original GPS points)
@@ -1177,6 +1168,7 @@
         const colorMode = ctx && ctx.colorMode ? ctx.colorMode : "monoBlue";
         const useSliding = shouldUseSlidingWindows(points, 30);
         if (useSliding) {
+          // For moving datasets, skip the single large enclosing circle (it becomes meaningless).
           // Walking dataset: multiple circles over time (window i-3..i+3), each heat uses only its own 7-point window.
           const windows = buildSlidingWindows(points, 3);
           const stride = 3; // reduce visual clutter while preserving motion trail
@@ -1204,6 +1196,16 @@
           if (bounds) map.fitBounds(bounds.pad(0.08), { maxZoom: 21 });
           return;
         }
+
+        // Stationary dataset: draw one enclosing big circle.
+        heatCircle = L.circle([center.lat, center.lon], {
+          radius: radiusMeters,
+          color: "rgba(43,92,255,0.75)",
+          weight: 2,
+          fillColor: "rgba(43,92,255,0.20)",
+          fillOpacity: 0.20,
+          interactive: false,
+        }).addTo(map);
 
         if (colorMode === "bgr") {
           const baseRadius = Math.max(8, Math.round(cellPx * 1.1));
