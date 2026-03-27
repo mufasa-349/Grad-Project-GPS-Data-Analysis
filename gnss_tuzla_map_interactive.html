@@ -554,13 +554,12 @@
         }
       }
 
-      function getSelectedDataPath() {
-        return ui.fileSelect ? String(ui.fileSelect.value || "") : "";
-      }
-
-      function isWalkingDatasetSelected() {
-        const p = getSelectedDataPath().toLowerCase();
-        return p.includes("yuruyuske_fixonly.txt");
+      function shouldUseSlidingWindows(points, thresholdMeters = 30) {
+        if (!points || points.length < 2) return false;
+        const first = points[0];
+        const last = points[points.length - 1];
+        const d = haversineMeters(first.lat, first.lon, last.lat, last.lon);
+        return d > thresholdMeters;
       }
 
       function buildSlidingWindows(points, halfWindow = 3) {
@@ -1176,8 +1175,8 @@
         const cellPx = Number.isFinite(cellPxRaw) ? cellPxRaw : 16;
 
         const colorMode = ctx && ctx.colorMode ? ctx.colorMode : "monoBlue";
-        const isWalking = isWalkingDatasetSelected();
-        if (isWalking) {
+        const useSliding = shouldUseSlidingWindows(points, 30);
+        if (useSliding) {
           // Walking dataset: multiple circles over time (window i-3..i+3), each heat uses only its own 7-point window.
           const windows = buildSlidingWindows(points, 3);
           const stride = 3; // reduce visual clutter while preserving motion trail
