@@ -554,6 +554,107 @@
         }
       }
 
+      function getSelectedDataPath() {
+        return ui.fileSelect ? String(ui.fileSelect.value || "") : "";
+      }
+
+      function isWalkingDatasetSelected() {
+        const p = getSelectedDataPath().toLowerCase();
+        return p.includes("yuruyuske_fixonly.txt");
+      }
+
+      function buildSlidingWindows(points, halfWindow = 3) {
+        if (!points || points.length === 0) return [];
+        const windows = [];
+        for (let i = 0; i < points.length; i++) {
+          const start = Math.max(0, i - halfWindow);
+          const end = Math.min(points.length - 1, i + halfWindow);
+          const subset = points.slice(start, end + 1);
+          const center = meanLatLon(subset) || { lat: points[i].lat, lon: points[i].lon };
+          let radiusMeters = 0;
+          for (const p of subset) {
+            const d = haversineMeters(center.lat, center.lon, p.lat, p.lon);
+            if (d > radiusMeters) radiusMeters = d;
+          }
+          radiusMeters = Math.max(1.5, radiusMeters * 1.08);
+          windows.push({ idx: i, center, radiusMeters, subset });
+        }
+        return windows;
+      }
+
+      function colorFromT(t, colorMode) {
+        if (colorMode !== "bgr") return [43, 92, 255];
+        if (t <= 0.5) {
+          const u = t / 0.5;
+          return [0, Math.round(255 * u), Math.round(255 * (1 - u))];
+        }
+        const u = (t - 0.5) / 0.5;
+        return [Math.round(255 * u), Math.round(255 * (1 - u)), 0];
+      }
+
+      function addSoftBlobsClipped(center, radiusMeters, points, colorMode, baseRadiusPx) {
+        if (!points || points.length === 0) return;
+
+        const centerPt = map.latLngToContainerPoint([center.lat, center.lon]);
+        const llRight = map.containerPointToLatLng([centerPt.x + 1, centerPt.y]);
+        const metersPerPixel = Math.max(
+          0.000001,
+          haversineMeters(center.lat, center.lon, llRight.lat, llRight.lng)
+        );
+
+        const sigmaMeters = Math.max(1.5, Math.min(8, radiusMeters * 0.12));
+        const inv2s2 = 1 / (2 * sigmaMeters * sigmaMeters);
+        const density = new Float64Array(points.length);
+        for (let i = 0; i < points.length; i++) {
+          let acc = 0;
+          const pi = points[i];
+          for (let j = 0; j < points.length; j++) {
+            const pj = points[j];
+            const d = haversineMeters(pi.lat, pi.lon, pj.lat, pj.lon);
+            acc += Math.exp(-(d * d) * inv2s2);
+          }
+          density[i] = acc;
+        }
+        let dmin = Infinity;
+        let dmax = -Infinity;
+        for (let i = 0; i < density.length; i++) {
+          if (density[i] < dmin) dmin = density[i];
+          if (density[i] > dmax) dmax = density[i];
+        }
+        const denom = dmax - dmin || 1;
+
+        const rings = [
+          { scale: 2.4, a0: 0.04, a1: 0.08 },
+          { scale: 1.8, a0: 0.06, a1: 0.12 },
+          { scale: 1.3, a0: 0.10, a1: 0.18 },
+          { scale: 0.9, a0: 0.16, a1: 0.24 },
+        ];
+
+        for (let i = 0; i < points.length; i++) {
+          const p = points[i];
+          const dToCenter = haversineMeters(center.lat, center.lon, p.lat, p.lon);
+          const maxPxByCircle = Math.max(0, (radiusMeters - dToCenter) / metersPerPixel);
+          if (maxPxByCircle <= 1) continue;
+
+          const t = Math.max(0, Math.min(1, (density[i] - dmin) / denom));
+          const [r, g, b] = colorFromT(t, colorMode);
+
+          for (const ring of rings) {
+            const targetR = Math.max(2, Math.round(baseRadiusPx * ring.scale));
+            const clippedR = Math.min(targetR, Math.max(1, Math.floor(maxPxByCircle - 1)));
+            if (clippedR <= 1) continue;
+            const alpha = Math.min(0.95, ring.a0 + ring.a1 * t);
+            const marker = L.circleMarker([p.lat, p.lon], {
+              radius: clippedR,
+              stroke: false,
+              fillColor: `rgb(${r},${g},${b})`,
+              fillOpacity: alpha,
+            });
+            layerGroup.addLayer(marker);
+          }
+        }
+      }
+
       const GridHeatLayer = L.Layer.extend({
         initialize: function (points, opts) {
           this._points = points || [];
@@ -1075,67 +1176,39 @@
         const cellPx = Number.isFinite(cellPxRaw) ? cellPxRaw : 16;
 
         const colorMode = ctx && ctx.colorMode ? ctx.colorMode : "monoBlue";
+        const isWalking = isWalkingDatasetSelected();
+        if (isWalking) {
+          // Walking dataset: multiple circles over time (window i-3..i+3), each heat uses only its own 7-point window.
+          const windows = buildSlidingWindows(points, 3);
+          const stride = 3; // reduce visual clutter while preserving motion trail
+          let bounds = null;
+          for (let k = 0; k < windows.length; k += stride) {
+            const w = windows[k];
+            const c = L.circle([w.center.lat, w.center.lon], {
+              radius: w.radiusMeters,
+              color: "rgba(43,92,255,0.25)",
+              weight: 1,
+              fillColor: "rgba(43,92,255,0.06)",
+              fillOpacity: 0.06,
+              interactive: false,
+            }).addTo(map);
+            if (!bounds) bounds = c.getBounds();
+            else bounds.extend(c.getBounds());
+
+            const localBase = Math.max(7, Math.round(cellPx * 0.8));
+            if (colorMode === "bgr") {
+              addSoftBlobsClipped(w.center, w.radiusMeters, w.subset, "bgr", localBase);
+            } else {
+              addSoftBlobsClipped(w.center, w.radiusMeters, w.subset, "monoBlue", localBase);
+            }
+          }
+          if (bounds) map.fitBounds(bounds.pad(0.08), { maxZoom: 21 });
+          return;
+        }
+
         if (colorMode === "bgr") {
-          // Stable "real-like" heatmap: each original point is the center of a soft blob,
-          // and color represents local probability (density).
-          const sigmaMeters = Math.max(1.5, Math.min(8, radiusMeters * 0.12));
-          const inv2s2 = 1 / (2 * sigmaMeters * sigmaMeters);
-          const density = new Float64Array(points.length);
-
-          for (let i = 0; i < points.length; i++) {
-            let acc = 0;
-            const pi = points[i];
-            for (let j = 0; j < points.length; j++) {
-              const pj = points[j];
-              const d = haversineMeters(pi.lat, pi.lon, pj.lat, pj.lon);
-              acc += Math.exp(-(d * d) * inv2s2);
-            }
-            density[i] = acc;
-          }
-
-          let dmin = Infinity;
-          let dmax = -Infinity;
-          for (let i = 0; i < density.length; i++) {
-            if (density[i] < dmin) dmin = density[i];
-            if (density[i] > dmax) dmax = density[i];
-          }
-          const denom = dmax - dmin || 1;
-
-          const colorForT = (t) => {
-            // Blue -> Green -> Red
-            if (t <= 0.5) {
-              const u = t / 0.5;
-              return [0, Math.round(255 * u), Math.round(255 * (1 - u))];
-            }
-            const u = (t - 0.5) / 0.5;
-            return [Math.round(255 * u), Math.round(255 * (1 - u)), 0];
-          };
-
           const baseRadius = Math.max(8, Math.round(cellPx * 1.1));
-
-          for (let i = 0; i < points.length; i++) {
-            const p = points[i];
-            const t = Math.max(0, Math.min(1, (density[i] - dmin) / denom));
-            const [r, g, b] = colorForT(t);
-
-            // Multi-ring soft blob for a more continuous heatmap look.
-            const rings = [
-              { scale: 2.4, alpha: 0.04 + 0.08 * t },
-              { scale: 1.8, alpha: 0.06 + 0.12 * t },
-              { scale: 1.3, alpha: 0.10 + 0.18 * t },
-              { scale: 0.9, alpha: 0.16 + 0.24 * t },
-            ];
-
-            for (const ring of rings) {
-              const marker = L.circleMarker([p.lat, p.lon], {
-                radius: Math.max(3, Math.round(baseRadius * ring.scale)),
-                stroke: false,
-                fillColor: `rgb(${r},${g},${b})`,
-                fillOpacity: Math.min(0.95, ring.alpha),
-              });
-              layerGroup.addLayer(marker);
-            }
-          }
+          addSoftBlobsClipped(center, radiusMeters, points, "bgr", baseRadius);
         } else {
           heatLayer = new GridHeatLayer(points, {
             center,
