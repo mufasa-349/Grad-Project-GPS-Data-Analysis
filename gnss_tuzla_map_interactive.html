@@ -442,6 +442,11 @@
       let heatLayer = null;
       let heatCircle = null;
       let lastPoints = [];
+      let routeLayer = null;
+      let routePreviewGroup = L.layerGroup().addTo(map);
+      let lastPreviewIdx = null;
+      let routeMouseMoveHandler = null;
+      let routeMouseOutHandler = null;
 
       function setError(msg) {
         ui.errorBox.style.display = "block";
@@ -591,7 +596,7 @@
         return [Math.round(255 * u), Math.round(255 * (1 - u)), 0];
       }
 
-      function addSoftBlobsClipped(center, radiusMeters, points, colorMode, baseRadiusPx) {
+      function addSoftBlobsClipped(targetGroup, center, radiusMeters, points, colorMode, baseRadiusPx) {
         if (!points || points.length === 0) return;
 
         const centerPt = map.latLngToContainerPoint([center.lat, center.lon]);
@@ -648,8 +653,9 @@
               stroke: false,
               fillColor: `rgb(${r},${g},${b})`,
               fillOpacity: alpha,
+              interactive: false,
             });
-            layerGroup.addLayer(marker);
+            targetGroup.addLayer(marker);
           }
         }
       }
@@ -1168,32 +1174,126 @@
         const colorMode = ctx && ctx.colorMode ? ctx.colorMode : "monoBlue";
         const useSliding = shouldUseSlidingWindows(points, 30);
         if (useSliding) {
-          // For moving datasets, skip the single large enclosing circle (it becomes meaningless).
-          // Walking dataset: multiple circles over time (window i-7..i+7), each heat uses only its own time window.
-          const windows = buildSlidingWindows(points, 7);
-          const stride = 5; // reduce visual clutter while preserving motion trail
-          let bounds = null;
-          for (let k = 0; k < windows.length; k += stride) {
-            const w = windows[k];
-            const c = L.circle([w.center.lat, w.center.lon], {
-              radius: w.radiusMeters,
-              color: "rgba(43,92,255,0.25)",
-              weight: 1,
-              fillColor: "rgba(43,92,255,0.06)",
-              fillOpacity: 0.06,
-              interactive: false,
-            }).addTo(map);
-            if (!bounds) bounds = c.getBounds();
-            else bounds.extend(c.getBounds());
-
-            const localBase = Math.max(7, Math.round(cellPx * 0.8));
-            if (colorMode === "bgr") {
-              addSoftBlobsClipped(w.center, w.radiusMeters, w.subset, "bgr", localBase);
-            } else {
-              addSoftBlobsClipped(w.center, w.radiusMeters, w.subset, "monoBlue", localBase);
-            }
+          // Moving datasets: draw route as a dark red line.
+          // On hover over the route, preview the i-7..i+7 window circle + heat (clipped).
+          if (routeLayer) {
+            map.removeLayer(routeLayer);
+            routeLayer = null;
           }
-          if (bounds) map.fitBounds(bounds.pad(0.08), { maxZoom: 21 });
+          routePreviewGroup.clearLayers();
+          lastPreviewIdx = null;
+          if (routeMouseMoveHandler) {
+            map.off("mousemove", routeMouseMoveHandler);
+            routeMouseMoveHandler = null;
+          }
+          if (routeMouseOutHandler) {
+            map.off("mouseout", routeMouseOutHandler);
+            routeMouseOutHandler = null;
+          }
+
+          const latlngs = points.map((p) => [p.lat, p.lon]);
+          routeLayer = L.polyline(latlngs, {
+            color: "#6e0f0f",
+            weight: 4,
+            opacity: 0.88,
+          }).addTo(map);
+
+          // Minimal points along the route for context.
+          const dotStride = Math.max(8, Math.round(points.length / 60));
+          for (let i = 0; i < points.length; i += dotStride) {
+            const p = points[i];
+            const dot = L.circleMarker([p.lat, p.lon], {
+              radius: 4,
+              color: "rgba(255,255,255,0.65)",
+              weight: 1,
+              fillColor: "rgba(255,77,77,0.95)",
+              fillOpacity: 0.95,
+              interactive: false,
+            });
+            layerGroup.addLayer(dot);
+          }
+
+          const bounds = routeLayer.getBounds();
+          if (bounds && bounds.isValid()) map.fitBounds(bounds.pad(0.08), { maxZoom: 20 });
+
+          const halfWindow = 7;
+          const localBase = Math.max(7, Math.round(cellPx * 0.85));
+          const previewForIndex = (idx) => {
+            if (idx === null || idx === undefined) return;
+            if (lastPreviewIdx === idx) return;
+            lastPreviewIdx = idx;
+            routePreviewGroup.clearLayers();
+
+            const start = Math.max(0, idx - halfWindow);
+            const end = Math.min(points.length - 1, idx + halfWindow);
+            const subset = points.slice(start, end + 1);
+            const centerW = meanLatLon(subset) || { lat: points[idx].lat, lon: points[idx].lon };
+            let radiusW = 0;
+            for (const p of subset) {
+              const d = haversineMeters(centerW.lat, centerW.lon, p.lat, p.lon);
+              if (d > radiusW) radiusW = d;
+            }
+            radiusW = Math.max(1.5, radiusW * 1.08);
+
+            const c = L.circle([centerW.lat, centerW.lon], {
+              radius: radiusW,
+              color: "rgba(43,92,255,0.55)",
+              weight: 2,
+              fillColor: "rgba(43,92,255,0.10)",
+              fillOpacity: 0.10,
+              interactive: false,
+            });
+            routePreviewGroup.addLayer(c);
+
+            addSoftBlobsClipped(
+              routePreviewGroup,
+              centerW,
+              radiusW,
+              subset,
+              colorMode === "bgr" ? "bgr" : "monoBlue",
+              localBase
+            );
+          };
+
+          const nearestIndexToLatLng = (ll) => {
+            // Simple linear scan is fine for ~1k points.
+            let bestIdx = 0;
+            let bestD = Infinity;
+            for (let i = 0; i < points.length; i++) {
+              const p = points[i];
+              const d = haversineMeters(ll.lat, ll.lng, p.lat, p.lon);
+              if (d < bestD) {
+                bestD = d;
+                bestIdx = i;
+              }
+            }
+            return bestIdx;
+          };
+
+          // Use map-level mousemove with a pixel threshold so preview doesn't flicker
+          // when the cursor is over the preview blobs/circle.
+          const pixelThreshold = 22;
+          routeMouseMoveHandler = (e) => {
+            const idx = nearestIndexToLatLng(e.latlng);
+            const p = points[idx];
+            const pt = map.latLngToContainerPoint([p.lat, p.lon]);
+            const mp = map.latLngToContainerPoint(e.latlng);
+            const dx = pt.x - mp.x;
+            const dy = pt.y - mp.y;
+            const dpx = Math.sqrt(dx * dx + dy * dy);
+            if (dpx <= pixelThreshold) previewForIndex(idx);
+            else {
+              routePreviewGroup.clearLayers();
+              lastPreviewIdx = null;
+            }
+          };
+          routeMouseOutHandler = () => {
+            routePreviewGroup.clearLayers();
+            lastPreviewIdx = null;
+          };
+          map.on("mousemove", routeMouseMoveHandler);
+          map.on("mouseout", routeMouseOutHandler);
+
           return;
         }
 
@@ -1207,9 +1307,25 @@
           interactive: false,
         }).addTo(map);
 
+        // Ensure route helpers are removed for stationary datasets.
+        if (routeLayer) {
+          map.removeLayer(routeLayer);
+          routeLayer = null;
+        }
+        routePreviewGroup.clearLayers();
+        lastPreviewIdx = null;
+        if (routeMouseMoveHandler) {
+          map.off("mousemove", routeMouseMoveHandler);
+          routeMouseMoveHandler = null;
+        }
+        if (routeMouseOutHandler) {
+          map.off("mouseout", routeMouseOutHandler);
+          routeMouseOutHandler = null;
+        }
+
         if (colorMode === "bgr") {
           const baseRadius = Math.max(8, Math.round(cellPx * 1.1));
-          addSoftBlobsClipped(center, radiusMeters, points, "bgr", baseRadius);
+          addSoftBlobsClipped(layerGroup, center, radiusMeters, points, "bgr", baseRadius);
         } else {
           heatLayer = new GridHeatLayer(points, {
             center,
