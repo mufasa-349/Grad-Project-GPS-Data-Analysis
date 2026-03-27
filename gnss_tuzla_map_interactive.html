@@ -1111,31 +1111,30 @@
             return [Math.round(255 * u), Math.round(255 * (1 - u)), 0];
           };
 
-          const haloRadius = Math.max(10, Math.round(cellPx * 1.5));
-          const coreRadius = Math.max(4, Math.round(cellPx * 0.7));
+          const baseRadius = Math.max(8, Math.round(cellPx * 1.1));
 
           for (let i = 0; i < points.length; i++) {
             const p = points[i];
             const t = Math.max(0, Math.min(1, (density[i] - dmin) / denom));
             const [r, g, b] = colorForT(t);
 
-            // Outer soft halo
-            const halo = L.circleMarker([p.lat, p.lon], {
-              radius: haloRadius,
-              stroke: false,
-              fillColor: `rgb(${r},${g},${b})`,
-              fillOpacity: 0.07 + 0.15 * t,
-            });
-            layerGroup.addLayer(halo);
+            // Multi-ring soft blob for a more continuous heatmap look.
+            const rings = [
+              { scale: 2.4, alpha: 0.04 + 0.08 * t },
+              { scale: 1.8, alpha: 0.06 + 0.12 * t },
+              { scale: 1.3, alpha: 0.10 + 0.18 * t },
+              { scale: 0.9, alpha: 0.16 + 0.24 * t },
+            ];
 
-            // Inner core
-            const core = L.circleMarker([p.lat, p.lon], {
-              radius: coreRadius,
-              stroke: false,
-              fillColor: `rgb(${r},${g},${b})`,
-              fillOpacity: 0.22 + 0.35 * t,
-            });
-            layerGroup.addLayer(core);
+            for (const ring of rings) {
+              const marker = L.circleMarker([p.lat, p.lon], {
+                radius: Math.max(3, Math.round(baseRadius * ring.scale)),
+                stroke: false,
+                fillColor: `rgb(${r},${g},${b})`,
+                fillOpacity: Math.min(0.95, ring.alpha),
+              });
+              layerGroup.addLayer(marker);
+            }
           }
         } else {
           heatLayer = new GridHeatLayer(points, {
