@@ -52,6 +52,20 @@
 \newlabel{fig:our_visualization_ideas}{{6}{4}{Our proposed alternatives to the traditional uniform blue-dot uncertainty visualization}{figure.caption.6}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {VIII}Implementation of our Visualization Methods}{4}{section.8}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-A}}Input data format}{4}{subsection.8.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces GNSS Logger \texttt  {Fix}-only datasets used in this work.}}{5}{table.caption.7}\protected@file@percent }
+\newlabel{tab:fix_counts}{{I}{5}{GNSS Logger \texttt {Fix}-only datasets used in this work}{table.caption.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-B}}Web prototype}{5}{subsection.8.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Overview of the interactive GNSS visualization interface: control panel (left), map (top right), and longitude--altitude chart (bottom right).}}{5}{figure.caption.8}\protected@file@percent }
+\newlabel{fig:general_ui}{{7}{5}{Overview of the interactive GNSS visualization interface: control panel (left), map (top right), and longitude--altitude chart (bottom right)}{figure.caption.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Walking dataset \texttt  {yuruyuske\_FixOnly}: approximately 35 minutes of GNSS fixes; the participant remained stationary for about 10 minutes at the start and end at the same location. The map uses the default \emph  {point} mode: fixes are drawn at their reported latitude/longitude only---uncertainty is not visualized (no accuracy rings or other uncertainty overlays).}}{5}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:yuruyuske_original}{{8}{5}{Walking dataset \texttt {yuruyuske\_FixOnly}: approximately 35 minutes of GNSS fixes; the participant remained stationary for about 10 minutes at the start and end at the same location. The map uses the default \emph {point} mode: fixes are drawn at their reported latitude/longitude only---uncertainty is not visualized (no accuracy rings or other uncertainty overlays)}{figure.caption.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces \texttt  {uc onu\_FixOnly} (stationary hold, $\sim $10 minutes): default \emph  {point} mode---each fix is plotted at its reported latitude/longitude with no uncertainty glyphs. Raw scatter under stillness is visible.}}{6}{figure.caption.10}\protected@file@percent }
+\newlabel{fig:uc_onu_original}{{9}{6}{\texttt {uc onu\_FixOnly} (stationary hold, $\sim $10 minutes): default \emph {point} mode---each fix is plotted at its reported latitude/longitude with no uncertainty glyphs. Raw scatter under stillness is visible}{figure.caption.10}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces \emph  {Heat Map our idea} on the same data. The tool bins screen-space fixes into a square grid (cell size set by the \emph  {Heatmap cell size} control), counts fixes per cell, normalizes by the maximum count, and fills each nonempty cell with a fixed blue RGB while mapping normalized count to opacity (with a fractional power for contrast). A circle centered on the mean position encloses all fixes; rendering is clipped to that circle (stationary tracks use this single view).}}{6}{figure.caption.11}\protected@file@percent }
+\newlabel{fig:uc_onu_heatmap_our_idea}{{10}{6}{\emph {Heat Map our idea} on the same data. The tool bins screen-space fixes into a square grid (cell size set by the \emph {Heatmap cell size} control), counts fixes per cell, normalizes by the maximum count, and fills each nonempty cell with a fixed blue RGB while mapping normalized count to opacity (with a fractional power for contrast). A circle centered on the mean position encloses all fixes; rendering is clipped to that circle (stationary tracks use this single view)}{figure.caption.11}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces \emph  {Heat Map (Blue--Green--Red)} on the same data. For each fix, the code computes a kernel density: a sum of Gaussian weights over all other fixes as a function of pairwise great-circle distance (meters), with scale tied to the spatial extent of the cloud. Densities are min--max normalized; hue runs blue $\rightarrow $ green $\rightarrow $ red with increasing density. Each fix is drawn as several semi-transparent concentric rings whose size and opacity depend on that normalized score, clipped to the same enclosing circle---a soft, marker-based heatmap rather than a screen grid.}}{7}{figure.caption.12}\protected@file@percent }
+\newlabel{fig:uc_onu_heatmap_bgr}{{11}{7}{\emph {Heat Map (Blue--Green--Red)} on the same data. For each fix, the code computes a kernel density: a sum of Gaussian weights over all other fixes as a function of pairwise great-circle distance (meters), with scale tied to the spatial extent of the cloud. Densities are min--max normalized; hue runs blue $\rightarrow $ green $\rightarrow $ red with increasing density. Each fix is drawn as several semi-transparent concentric rings whose size and opacity depend on that normalized score, clipped to the same enclosing circle---a soft, marker-based heatmap rather than a screen grid}{figure.caption.12}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {IX}Conclusion}{7}{section.9}\protected@file@percent }
 \bibstyle{IEEEtran}
 \bibdata{references}
 \bibcite{ranasinghe2019visualising}{1}
@@ -59,11 +73,5 @@
 \bibcite{mckenzie2016assessing}{3}
 \bibcite{hegarty2016where}{4}
 \bibcite{lodha2002visualization}{5}
-\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces GNSS Logger \texttt  {Fix}-only datasets used in this work.}}{5}{table.caption.7}\protected@file@percent }
-\newlabel{tab:fix_counts}{{I}{5}{GNSS Logger \texttt {Fix}-only datasets used in this work}{table.caption.7}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-B}}Web prototype}{5}{subsection.8.2}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Overview of the interactive GNSS visualization interface: control panel (left), map (top right), and longitude--altitude chart (bottom right).}}{5}{figure.caption.8}\protected@file@percent }
-\newlabel{fig:general_ui}{{7}{5}{Overview of the interactive GNSS visualization interface: control panel (left), map (top right), and longitude--altitude chart (bottom right)}{figure.caption.8}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {IX}Conclusion}{5}{section.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{References}{5}{section*.9}\protected@file@percent }
-\gdef \@abspage@last{5}
+\@writefile{toc}{\contentsline {section}{References}{8}{section*.13}\protected@file@percent }
+\gdef \@abspage@last{8}

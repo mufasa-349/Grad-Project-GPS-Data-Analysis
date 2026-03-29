@@ -294,10 +294,45 @@ We implemented an interactive prototype as a single-page web application (\textt
 
 Figure~\ref{fig:general_ui} shows the main layout. The \textbf{left panel} summarizes the loaded dataset (point count, distance-from-first-fix range, accuracy ranges, altitude/longitude extents, and details for a selected point) and hosts the primary controls: \textbf{Data source} selects which prepared \texttt{Fix}-only or combined text file to load; \textbf{Visualization method} switches between the original point view, heatmap variants, and GPS uncertainty (accuracy rings); \textbf{Heatmap cell size} adjusts grid resolution where applicable; \textbf{Reload} refreshes the current file. The \textbf{(i)} button opens a short in-app ``How to use'' dialog. The \textbf{map} shows OpenStreetMap tiles with GNSS fixes overlaid according to the chosen mode (e.g., colored points, heatmaps, or uncertainty circles). The \textbf{lower chart} plots longitude versus altitude with a simple normalized regression line for quick inspection of the vertical profile. The tool is intended for exploratory analysis and comparison of uncertainty-centric views rather than for production navigation.
 
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{images/yuruyuske-original.png}
+    \caption{Walking dataset \texttt{yuruyuske\_FixOnly}: approximately 35 minutes of GNSS fixes; the participant remained stationary for about 10 minutes at the start and end at the same location. The map uses the default \emph{point} mode: fixes are drawn at their reported latitude/longitude only---uncertainty is not visualized (no accuracy rings or other uncertainty overlays).}
+    \label{fig:yuruyuske_original}
+\end{figure}
+
+Figure~\ref{fig:yuruyuske_original} illustrates this collection protocol: the dense clusters at both ends correspond to the standing-still segments, while the trace in between is the walk. The screenshot deliberately shows raw fix placement rather than an uncertainty-centric view, to establish a baseline before comparing other visualization modes.
+
+For the \texttt{uc onu\_FixOnly} dataset we follow the same progression: first the default point view, then two heatmap encodings implemented in the prototype. The phone was held stationary for approximately 10 minutes; reported positions still wander, which motivates visualizing spread rather than a single crisp point.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{images/uc-onu-original.png}
+    \caption{\texttt{uc onu\_FixOnly} (stationary hold, $\sim$10 minutes): default \emph{point} mode---each fix is plotted at its reported latitude/longitude with no uncertainty glyphs. Raw scatter under stillness is visible.}
+    \label{fig:uc_onu_original}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{images/uc-onu-heatmap-our-idea.png}
+    \caption{\emph{Heat Map our idea} on the same data. The tool bins screen-space fixes into a square grid (cell size set by the \emph{Heatmap cell size} control), counts fixes per cell, normalizes by the maximum count, and fills each nonempty cell with a fixed blue RGB while mapping normalized count to opacity (with a fractional power for contrast). A circle centered on the mean position encloses all fixes; rendering is clipped to that circle (stationary tracks use this single view).}
+    \label{fig:uc_onu_heatmap_our_idea}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{images/uc-onu-colored-heat-map.png}
+    \caption{\emph{Heat Map (Blue--Green--Red)} on the same data. For each fix, the code computes a kernel density: a sum of Gaussian weights over all other fixes as a function of pairwise great-circle distance (meters), with scale tied to the spatial extent of the cloud. Densities are min--max normalized; hue runs blue $\rightarrow$ green $\rightarrow$ red with increasing density. Each fix is drawn as several semi-transparent concentric rings whose size and opacity depend on that normalized score, clipped to the same enclosing circle---a soft, marker-based heatmap rather than a screen grid.}
+    \label{fig:uc_onu_heatmap_bgr}
+\end{figure}
+
+Figure~\ref{fig:uc_onu_original}--\ref{fig:uc_onu_heatmap_bgr} summarize the comparison: Figure~\ref{fig:uc_onu_original} shows unstructured scatter; Figure~\ref{fig:uc_onu_heatmap_our_idea} emphasizes \emph{where} fixes pile up on a coarse grid; Figure~\ref{fig:uc_onu_heatmap_bgr} emphasizes local crowding via kernel density and a sequential blue--green--red hue scale. Neither heatmap substitutes for explicit accuracy rings (that is a separate \emph{GPS Uncertainty} mode in the tool), but both make positional ambiguity visually salient from the fix cloud alone.
+
 \section{Conclusion}
 
 This mock proposal establishes the initial direction of a study on visualizing uncertainty in GPS and location-based data. The project focuses on making uncertainty visible rather than hiding it, so that users can interpret positional information more realistically. The reviewed literature shows that visual encoding choices strongly affect how users understand uncertain position estimates, especially in navigation and self-location tasks. The next step is to expand the literature coverage where needed and then derive concrete visualization proposals based on the most relevant design patterns.
 
+\clearpage
 \bibliographystyle{IEEEtran}
 \bibliography{references}
 

@@ -1,14 +1,14 @@
 # Fdb version 4
-["bibtex main"] 1774778594.24373 "main.aux" "main.bbl" "main" 1774778602.4332 0
+["bibtex main"] 1774779999.6932 "main.aux" "main.bbl" "main" 1774780002.22515 0
   "./references.bib" 1774765472 2346 249f2f7d4b680ce12fdea02314ccb9e4 ""
   "/usr/local/texlive/2025basic/texmf-dist/bibtex/bst/ieeetran/IEEEtran.bst" 1440712899 57748 7c8250ecf02814ce6ddc0cdbb63df1dd ""
-  "main.aux" 1774778602.36359 8274 f23bb4f57afa655dc312509c6fb2cdf4 "pdflatex"
+  "main.aux" 1774780002.11717 12328 922f07182014a679d00badc0f79c599e "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1774778600.6151 "/Users/mustafabozyel/Github-Desktop/Grad-Project-GPS-Data-Analysis/Mock_Proposal_ENS491/main.tex" "main.pdf" "main" 1774778602.43337 0
-  "/Users/mustafabozyel/Github-Desktop/Grad-Project-GPS-Data-Analysis/Mock_Proposal_ENS491/main.tex" 1774778600.39255 20801 6a61541ceabb4d7c3751e8be7eaea93f ""
+["pdflatex"] 1774779999.75331 "/Users/mustafabozyel/Github-Desktop/Grad-Project-GPS-Data-Analysis/Mock_Proposal_ENS491/main.tex" "main.pdf" "main" 1774780002.22528 0
+  "/Users/mustafabozyel/Github-Desktop/Grad-Project-GPS-Data-Analysis/Mock_Proposal_ENS491/main.tex" 1774779999.41508 24376 144d82ce55b6863856adc32f1a4258bd ""
   "/usr/local/texlive/2025basic/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/usr/local/texlive/2025basic/texmf-dist/fonts/tfm/adobe/courier/pcrr8r.tfm" 1136768653 1292 bd42be2f344128bff6d35d98474adfe3 ""
   "/usr/local/texlive/2025basic/texmf-dist/fonts/tfm/adobe/courier/pcrr8t.tfm" 1136768653 1384 4632f5e54900a7dadbb83f555bc61e56 ""
@@ -43,6 +43,7 @@
   "/usr/local/texlive/2025basic/texmf-dist/fonts/tfm/public/cm/cmsy6.tfm" 1136768653 1116 933a60c408fc0a863a92debe84b2d294 ""
   "/usr/local/texlive/2025basic/texmf-dist/fonts/tfm/public/cm/cmsy8.tfm" 1136768653 1120 8b7d695260f3cff42e636090a8002094 ""
   "/usr/local/texlive/2025basic/texmf-dist/fonts/tfm/public/cm/cmsy9.tfm" 1136768653 1116 25a7bf822c58caf309a702ef79f4afbb ""
+  "/usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb" 1248133631 32569 5e5ddc8df908dea60932f3c484a54c0d ""
   "/usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb" 1248133631 32716 08e384dc442464e7285e891af9f45947 ""
   "/usr/local/texlive/2025basic/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb" 1136849748 45758 19968a0990191524e34e1994d4a31cb6 ""
   "/usr/local/texlive/2025basic/texmf-dist/fonts/type1/urw/times/utmb8a.pfb" 1136849748 44729 811d6c62865936705a31c797a1d5dada ""
@@ -132,10 +133,14 @@
   "images/fig_mckenzie2016_blue_dot_variants.png" 1774765472 148053 beca222e80293a6220c3c86fa0407a44 ""
   "images/fig_ranasinghe2019_visualizations.png" 1774765472 695680 71e9b1db8d7535abab2da421c3ef19b6 ""
   "images/general-ui.png" 1774777488.01957 929288 9e3f1a7e3b50baec8b68276c2a22f3cd ""
-  "main.aux" 1774778602.36359 8274 f23bb4f57afa655dc312509c6fb2cdf4 "pdflatex"
-  "main.bbl" 1774778594.25959 2624 20a3406efb5f2e13646544081ac49a17 "bibtex main"
-  "main.out" 1774778602.36434 5727 7007d120553ac8bb8ac59b4c3d60db23 "pdflatex"
-  "main.tex" 1774778600.39255 20801 6a61541ceabb4d7c3751e8be7eaea93f ""
+  "images/uc-onu-colored-heat-map.png" 1774777193.14876 583012 d3e0e96831c4566713e8f0825ac88fa4 ""
+  "images/uc-onu-heatmap-our-idea.png" 1774776960.65903 329854 acee94a9118fba564ff15d234de20e33 ""
+  "images/uc-onu-original.png" 1774777116.0728 491828 58365e5396099a21192fe8fa8c49ad9d ""
+  "images/yuruyuske-original.png" 1774777360.96392 1014261 b192ca90591dd0da8f8a99bdf9ff192d ""
+  "main.aux" 1774780002.11717 12328 922f07182014a679d00badc0f79c599e "pdflatex"
+  "main.bbl" 1774779999.74804 2624 20a3406efb5f2e13646544081ac49a17 "bibtex main"
+  "main.out" 1774780002.1185 5728 5513b2bf31716ae61af9a877e2e1b0fb "pdflatex"
+  "main.tex" 1774779999.41508 24376 144d82ce55b6863856adc32f1a4258bd ""
   (generated)
   "main.aux"
   "main.log"
