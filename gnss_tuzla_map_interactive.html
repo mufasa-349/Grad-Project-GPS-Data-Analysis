@@ -263,7 +263,7 @@
             <strong>Visualization method</strong>:
             <em>Original</em> tek tek noktalar; <em>Heat Map our idea</em> mavi grid / yoğunluk;
             <em>Heat Map (Blue-Green-Red)</em> olasılığa göre renkli yumuşak heatmap;
-            <em>To be determined</em> şimdilik yer tutucu.
+            <em>GPS Uncertainty (rings + color)</em> yatay doğrulukta yarı saydam halka (renk: iyi yeşil → kötü kırmızı), merkez nokta boyutu dikey doğruluğa göre.
           </li>
           <li>
             <strong>Heatmap cell size</strong>: Sadece mavi grid modunda hücre boyutu (daha büyük = daha bloklu görünüm).
@@ -403,7 +403,7 @@
                 <option value="original" selected>Original (Without Uncertanity)</option>
                 <option value="heatmap">Heat Map our idea</option>
                 <option value="heatmap_color">Heat Map (Blue-Green-Red)</option>
-                <option value="tbd">To be determined</option>
+                <option value="uncertainty">GPS Uncertainty (rings + color)</option>
               </select>
             </div>
           </div>
@@ -570,6 +570,24 @@
       let lastPreviewIdx = null;
       let routeMouseMoveHandler = null;
       let routeMouseOutHandler = null;
+
+      function clearRouteInteraction() {
+        if (routeLayer) {
+          map.removeLayer(routeLayer);
+          routeLayer = null;
+        }
+        routePreviewGroup.clearLayers();
+        lastPreviewIdx = null;
+        if (ui.previewRadius) ui.previewRadius.textContent = "-";
+        if (routeMouseMoveHandler) {
+          map.off("mousemove", routeMouseMoveHandler);
+          routeMouseMoveHandler = null;
+        }
+        if (routeMouseOutHandler) {
+          map.off("mouseout", routeMouseOutHandler);
+          routeMouseOutHandler = null;
+        }
+      }
 
       function setError(msg) {
         ui.errorBox.style.display = "block";
@@ -1120,6 +1138,7 @@
       function render(points) {
         lastPoints = points || [];
         layerGroup.clearLayers();
+        clearRouteInteraction();
         if (heatLayer) {
           map.removeLayer(heatLayer);
           heatLayer = null;
@@ -1184,6 +1203,74 @@
         if (method === "heatmap_color") {
           renderHeat(points, { colorMode: "bgr" });
           if (points.length > 0) {
+            setSelected(points[0]);
+            renderCoordGraph(points);
+          }
+          return;
+        }
+
+        if (method === "uncertainty") {
+          // Horizontal: circle radius = AccuracyMeters; color = accuracy (yeşil→kırmızı).
+          // Vertical: center dot radius scales with VerticalAccuracyMeters.
+          const defaultAccM = 5;
+          if (points.length > 0) {
+            const accDom =
+              hasAcc && accMax > accMin ? [accMin, accMax] : [accMin, accMin + 1e-6];
+            const colorByAcc = hasAcc
+              ? d3.scaleSequential(d3.interpolateRgb("#22c55e", "#ef4444")).domain(accDom)
+              : () => "#94a3b8";
+
+            for (const p of points) {
+              const accM = p.accuracy !== null && Number.isFinite(p.accuracy) ? p.accuracy : defaultAccM;
+              const fill = hasAcc && p.accuracy !== null && Number.isFinite(p.accuracy)
+                ? colorByAcc(p.accuracy)
+                : "rgba(148,163,184,0.45)";
+
+              const ring = L.circle([p.lat, p.lon], {
+                radius: Math.max(1, accM),
+                color: "rgba(255,255,255,0.35)",
+                weight: 1,
+                fillColor: fill,
+                fillOpacity: 0.32,
+              });
+              ring.bindPopup(
+                `<div class="tooltip">
+                  <div><b>AccuracyMeters</b>: ${fmtNum(accM, 2)} m</div>
+                  <div><b>VerticalAccuracyMeters</b>: ${
+                    p.verticalAccuracyMeters === null || !Number.isFinite(p.verticalAccuracyMeters)
+                      ? "-"
+                      : fmtNum(p.verticalAccuracyMeters, 2) + " m"
+                  }</div>
+                  <div><b>UnixTimeMillis</b>: ${p.unixTimeMillis === null ? "-" : fmtNum(p.unixTimeMillis, 0)}</div>
+                </div>`
+              );
+              ring.on("mouseover", () => setSelected(p));
+              ring.on("click", () => {
+                ring.openPopup();
+                setSelected(p);
+              });
+              layerGroup.addLayer(ring);
+
+              const vAcc = p.verticalAccuracyMeters;
+              const dotR =
+                vAcc !== null && Number.isFinite(vAcc)
+                  ? Math.max(2, Math.min(14, 2 + vAcc * 0.65))
+                  : 3;
+              const dot = L.circleMarker([p.lat, p.lon], {
+                radius: dotR,
+                color: "rgba(255,255,255,0.75)",
+                weight: 1,
+                fillColor: "rgba(15,23,42,0.92)",
+                fillOpacity: 0.95,
+              });
+              dot.on("click", () => {
+                setSelected(p);
+              });
+              layerGroup.addLayer(dot);
+            }
+
+            const bounds = L.latLngBounds(points.map((d) => [d.lat, d.lon]));
+            map.fitBounds(bounds.pad(0.01), { maxZoom: 21 });
             setSelected(points[0]);
             renderCoordGraph(points);
           }
