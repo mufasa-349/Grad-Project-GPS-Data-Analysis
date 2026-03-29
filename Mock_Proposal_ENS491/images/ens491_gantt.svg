@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="896" height="372" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+<rect width="100%" height="100%" fill="#fafafa"/>
+<text x="448" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#111">ENS 491 — Draft schedule (task leaders)</text>
+<text x="448" y="54" text-anchor="middle" font-size="12" fill="#475569">AI-driven uncertainty-aware visualization · GPS visualization track</text>
+<text x="281.0" y="64" text-anchor="middle" font-size="11" fill="#64748b">W1</text>
+<text x="323.0" y="64" text-anchor="middle" font-size="11" fill="#64748b">W2</text>
+<text x="365.0" y="64" text-anchor="middle" font-size="11" fill="#64748b">W3</text>
+<text x="407.0" y="64" text-anchor="middle" font-size="11" fill="#64748b">W4</text>
+<text x="449.0" y="64" text-anchor="middle" font-size="11" fill="#64748b">W5</text>
+<text x="491.0" y="64" text-anchor="middle" font-size="11" fill="#64748b">W6</text>
+<text x="533.0" y="64" text-anchor="middle" font-size="11" fill="#64748b">W7</text>
+<text x="575.0" y="64" text-anchor="middle" font-size="11" fill="#64748b">W8</text>
+<text x="617.0" y="64" text-anchor="middle" font-size="11" fill="#64748b">W9</text>
+<text x="659.0" y="64" text-anchor="middle" font-size="11" fill="#64748b">W10</text>
+<text x="701.0" y="64" text-anchor="middle" font-size="11" fill="#64748b">W11</text>
+<text x="743.0" y="64" text-anchor="middle" font-size="11" fill="#64748b">W12</text>
+<text x="785.0" y="64" text-anchor="middle" font-size="11" fill="#64748b">W13</text>
+<text x="827.0" y="64" text-anchor="middle" font-size="11" fill="#64748b">W14</text>
+<line x1="260" y1="72" x2="848" y2="72" stroke="#cbd5e1" stroke-width="1"/>
+<text x="252" y="98" text-anchor="end" font-size="11" fill="#0f172a">Literature extension</text>
+<rect x="262" y="80" width="122" height="28" rx="6" fill="#2563eb" stroke="#1f2937" stroke-width="0.8"/>
+<text x="323.0" y="99" text-anchor="middle" font-size="10" font-weight="bold" fill="white">Mustafa</text>
+<text x="252" y="142" text-anchor="end" font-size="11" fill="#0f172a">Prototype: modes &amp; UI polish</text>
+<rect x="304" y="124" width="206" height="28" rx="6" fill="#059669" stroke="#1f2937" stroke-width="0.8"/>
+<text x="407.0" y="143" text-anchor="middle" font-size="10" font-weight="bold" fill="white">Ömer</text>
+<text x="252" y="186" text-anchor="end" font-size="11" fill="#0f172a">Design concepts (figures / docs)</text>
+<rect x="388" y="168" width="164" height="28" rx="6" fill="#d97706" stroke="#1f2937" stroke-width="0.8"/>
+<text x="470.0" y="187" text-anchor="middle" font-size="10" font-weight="bold" fill="white">Senih</text>
+<text x="252" y="230" text-anchor="end" font-size="11" fill="#0f172a">Pilot evaluation / heuristics</text>
+<rect x="556" y="212" width="164" height="28" rx="6" fill="#2563eb" stroke="#1f2937" stroke-width="0.8"/>
+<text x="638.0" y="231" text-anchor="middle" font-size="10" font-weight="bold" fill="white">Mustafa</text>
+<text x="252" y="274" text-anchor="end" font-size="11" fill="#0f172a">Draft report &amp; presentation</text>
+<rect x="682" y="256" width="122" height="28" rx="6" fill="#d97706" stroke="#1f2937" stroke-width="0.8"/>
+<text x="743.0" y="275" text-anchor="middle" font-size="10" font-weight="bold" fill="white">Senih</text>
+<line x1="260" y1="72" x2="260" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="302" y1="72" x2="302" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="344" y1="72" x2="344" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="386" y1="72" x2="386" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="428" y1="72" x2="428" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="470" y1="72" x2="470" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="512" y1="72" x2="512" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="554" y1="72" x2="554" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="596" y1="72" x2="596" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="638" y1="72" x2="638" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="680" y1="72" x2="680" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="722" y1="72" x2="722" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="764" y1="72" x2="764" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="806" y1="72" x2="806" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="848" y1="72" x2="848" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+<text x="24" y="326" font-size="12" font-weight="bold" fill="#334155">Task leader</text>
+<rect x="24" y="312" width="14" height="14" fill="#2563eb" stroke="#1f2937" stroke-width="0.6"/>
+<text x="46" y="324" font-size="11" fill="#1e293b">Mustafa Bozyel</text>
+<rect x="234" y="312" width="14" height="14" fill="#059669" stroke="#1f2937" stroke-width="0.6"/>
+<text x="256" y="324" font-size="11" fill="#1e293b">Ömer Mert Özel</text>
+<rect x="444" y="312" width="14" height="14" fill="#d97706" stroke="#1f2937" stroke-width="0.6"/>
+<text x="466" y="324" font-size="11" fill="#1e293b">Senih Kırmaç</text>
+</svg>
