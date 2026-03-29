@@ -328,6 +328,24 @@ For the \texttt{uc onu\_FixOnly} dataset we follow the same progression: first t
 
 Figure~\ref{fig:uc_onu_original}--\ref{fig:uc_onu_heatmap_bgr} summarize the comparison: Figure~\ref{fig:uc_onu_original} shows unstructured scatter; Figure~\ref{fig:uc_onu_heatmap_our_idea} emphasizes \emph{where} fixes pile up on a coarse grid; Figure~\ref{fig:uc_onu_heatmap_bgr} emphasizes local crowding via kernel density and a sequential blue--green--red hue scale. Neither heatmap substitutes for explicit accuracy rings (that is a separate \emph{GPS Uncertainty} mode in the tool), but both make positional ambiguity visually salient from the fix cloud alone.
 
+Finally, we return to the walking dataset \texttt{yuruyuske\_FixOnly} (cf.\ Figure~\ref{fig:yuruyuske_original}) for two additional views placed here for narrative closure before the conclusion.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{images/yuruyuske-heatmap-colored.png}
+    \caption{The same walking dataset \texttt{yuruyuske\_FixOnly} using \emph{Heat Map (Blue--Green--Red)}: the same kernel-density, sequential hue encoding as in Figure~\ref{fig:uc_onu_heatmap_bgr}, applied here along the full trajectory so that segments with tighter fix crowding read hotter (green/red) and sparser segments cooler (blue).}
+    \label{fig:yuruyuske_heatmap_bgr}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{images/yuruyuske-ai-idea.png}
+    \caption{Exploratory visualization for \texttt{yuruyuske\_FixOnly} produced from an \emph{AI-suggested} design direction (concept sketch rather than a finalized project commitment). This encoding is included as a placeholder example only and \textbf{may be replaced} by a stronger, fully original manual design as the work matures.}
+    \label{fig:yuruyuske_ai_idea}
+\end{figure}
+
+Figure~\ref{fig:yuruyuske_heatmap_bgr} contrasts the raw point baseline in Figure~\ref{fig:yuruyuske_original} with density-aware color along the walk. Figure~\ref{fig:yuruyuske_ai_idea} documents an optional AI-assisted idea for the same route; we do not treat it as fixed scope---it can be swapped for a better original visualization without changing the core research goals.
+
 \section{Conclusion}
 
 This mock proposal establishes the initial direction of a study on visualizing uncertainty in GPS and location-based data. The project focuses on making uncertainty visible rather than hiding it, so that users can interpret positional information more realistically. The reviewed literature shows that visual encoding choices strongly affect how users understand uncertain position estimates, especially in navigation and self-location tasks. The next step is to expand the literature coverage where needed and then derive concrete visualization proposals based on the most relevant design patterns.
