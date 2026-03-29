@@ -164,6 +164,77 @@
         display: none;
         margin-top: 10px;
       }
+
+      .panel-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 6px;
+      }
+      .panel-header h1 {
+        margin: 0;
+        flex: 1;
+      }
+      .btn-icon {
+        flex-shrink: 0;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border-radius: 10px;
+        font-size: 18px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 20000;
+        background: rgba(0, 0, 0, 0.55);
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        box-sizing: border-box;
+      }
+      .modal-backdrop.is-open {
+        display: flex;
+      }
+      .modal-box {
+        max-width: 420px;
+        width: 100%;
+        max-height: min(86vh, 640px);
+        overflow: auto;
+        background: var(--panel);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 14px;
+        padding: 18px 18px 14px;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+      }
+      .modal-box h2 {
+        margin: 0 0 12px 0;
+        font-size: 17px;
+        font-weight: 700;
+      }
+      .modal-box ul {
+        margin: 0 0 14px 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      .modal-box li {
+        margin: 6px 0;
+      }
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 4px;
+      }
     </style>
 
     <link rel="preconnect" href="https://cdn.jsdelivr.net" />
@@ -171,9 +242,55 @@
     <script src="./vendor/leaflet.js"></script>
   </head>
   <body>
+    <div
+      id="howtoModal"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="howtoTitle"
+      aria-hidden="true"
+    >
+      <div class="modal-box" role="document">
+        <h2 id="howtoTitle">Nasıl kullanılır</h2>
+        <ul>
+          <li>
+            <strong>Data source</strong>: Hangi FixOnly / birleşik dosyanın yükleneceğini seçer. Değişince veri otomatik yenilenir.
+          </li>
+          <li>
+            <strong>Reload selected file</strong>: Seçili dosyayı tekrar okur (aynı dosyayı tazelemek için).
+          </li>
+          <li>
+            <strong>Visualization method</strong>:
+            <em>Original</em> tek tek noktalar; <em>Heat Map our idea</em> mavi grid / yoğunluk;
+            <em>Heat Map (Blue-Green-Red)</em> olasılığa göre renkli yumuşak heatmap;
+            <em>To be determined</em> şimdilik yer tutucu.
+          </li>
+          <li>
+            <strong>Heatmap cell size</strong>: Sadece mavi grid modunda hücre boyutu (daha büyük = daha bloklu görünüm).
+          </li>
+          <li>
+            İlk–son nokta arası mesafe 30 m’den fazlaysa rota <strong>koyu kırmızı çizgi</strong> olur; çizgi üzerinde gezerken
+            <strong>i±7</strong> penceresi için önizleme çemberi ve heat görünür. <strong>Current preview radius</strong> o çemberin yarıçapıdır (m).
+          </li>
+          <li>
+            Harita kutucukları için internet gerekir; dosyaları görmek için sayfayı yerel sunucudan aç
+            (<code>python3 -m http.server</code>).
+          </li>
+        </ul>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="howtoCloseBtn">Kapat</button>
+        </div>
+      </div>
+    </div>
+
     <div class="layout">
       <div class="panel">
-        <h1>GNSS Fix Pins (Tuzla) - Interactive</h1>
+        <div class="panel-header">
+          <h1>GNSS Fix Pins (Tuzla) - Interactive</h1>
+          <button type="button" class="btn btn-icon" id="howtoInfoBtn" title="Nasıl kullanılır" aria-label="Nasıl kullanılır">
+            ⓘ
+          </button>
+        </div>
 
         <div class="row">
           <div class="k">Loaded points</div>
@@ -1586,6 +1703,56 @@
         const points = parseFixOnlyText(text);
         render(points);
       });
+
+      // --- How to use (modal): ilk açılış sadece belirtilen hostname'lerde; ⓘ ile her zaman ---
+      const HOWTO_SHOW_FIRST_VISIT_ON_HOSTS = [
+        "127.0.0.1",
+        "localhost",
+        // Örnek: sunucuya IP ile girdiğinizde buraya ekleyin, örn. "192.168.1.10"
+      ];
+      function howtoStorageKey() {
+        return `gnss_tuzla_map_howto_seen:${window.location.hostname}`;
+      }
+      function shouldAutoShowHowtoOnce() {
+        const h = window.location.hostname;
+        return HOWTO_SHOW_FIRST_VISIT_ON_HOSTS.includes(h);
+      }
+      const howtoModal = document.getElementById("howtoModal");
+      const howtoCloseBtn = document.getElementById("howtoCloseBtn");
+      const howtoInfoBtn = document.getElementById("howtoInfoBtn");
+      function openHowtoModal() {
+        if (!howtoModal) return;
+        howtoModal.classList.add("is-open");
+        howtoModal.setAttribute("aria-hidden", "false");
+      }
+      function closeHowtoModal(markSeenOnThisHost) {
+        if (!howtoModal) return;
+        howtoModal.classList.remove("is-open");
+        howtoModal.setAttribute("aria-hidden", "true");
+        if (markSeenOnThisHost && shouldAutoShowHowtoOnce()) {
+          try {
+            localStorage.setItem(howtoStorageKey(), "1");
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+      if (howtoInfoBtn) howtoInfoBtn.addEventListener("click", () => openHowtoModal());
+      if (howtoCloseBtn)
+        howtoCloseBtn.addEventListener("click", () => closeHowtoModal(true));
+      if (howtoModal) {
+        howtoModal.addEventListener("click", (e) => {
+          if (e.target === howtoModal) closeHowtoModal(true);
+        });
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && howtoModal.classList.contains("is-open")) closeHowtoModal(true);
+        });
+      }
+      try {
+        if (shouldAutoShowHowtoOnce() && !localStorage.getItem(howtoStorageKey())) openHowtoModal();
+      } catch {
+        /* ignore */
+      }
 
       // Initial load
       loadDefaultText();
