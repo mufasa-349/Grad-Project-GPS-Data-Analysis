@@ -1,49 +1,62 @@
-% !TeX program = pdflatex
+% !TeX program = xelatex
 % !TeX root = draft_proposal.tex
+% Calibri requires XeLaTeX or LuaLaTeX + system font (e.g. Microsoft Office / Windows fonts on macOS).
 \documentclass[12pt,a4paper]{article}
+
+\usepackage{fontspec}
+% 12 pt: set by \documentclass[12pt,...]{article} above.
+\IfFontExistsTF{Calibri}{%
+  \setmainfont{Calibri}[Ligatures=TeX]%
+}{%
+  \typeout{^^Jwarning: Calibri not found (install Microsoft fonts / Office for exact match). Using Helvetica Neue as fallback.^^J}%
+  \setmainfont{Helvetica Neue}[Ligatures=TeX]%
+}
 
 \usepackage[margin=1in]{geometry}
 \usepackage{setspace}
 \usepackage{enumitem}
-\usepackage[hidelinks]{hyperref}
 \usepackage{cite}
 \usepackage{booktabs}
 \usepackage{url}
 \usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
 
 \setstretch{1.15}
 
 \begin{document}
 
+% --- Cover page (centered; logo at bottom) ---
+\thispagestyle{empty}
 \begin{center}
-    {\LARGE \textbf{ENS 491 -- Graduation Project (Design)}}\\[1em]
-    {\large (Draft) Proposal}
+    \vspace*{1.25em}
+    {\LARGE\bfseries ENS 491 -- Graduation Project (Design)}\\[0.85em]
+    {\large\bfseries (Draft) Proposal}
+
+    \vfill
+
+    {\bfseries Project Title}\\[0.55em]
+    {\normalsize AI-Driven Uncertainty-Aware Visualization for Decision Making Under Stress}
+
+    \vspace{2.25em}
+
+    {\bfseries Group Members}\\[0.55em]
+    {\normalsize Mustafa Bozyel (\#32417), Ömer Mert Özel (\#31998), Senih Kırmaç (\#32426)}
+
+    \vspace{1.35em}
+
+    {\bfseries Supervisor(s)}\\[0.55em]
+    {\normalsize Selim Balcısoy}
+
+    \vspace{1.35em}
+
+    {\bfseries Date}\\[0.55em]
+    {\normalsize March 29, 2026}
+
+    \vfill
+
+    \includegraphics[width=0.58\textwidth]{images/sabanci-logo.jpeg}
 \end{center}
-
-\vspace{1.5em}
-
-\noindent \textbf{Project Title:} AI-Driven Uncertainty-Aware Visualization for Decision Making Under Stress
-
-\vspace{1em}
-
-\noindent \textbf{Group Members:} Mustafa Bozyel (\#32417), Ömer Mert Özel (\#31998), Senih Kırmaç (\#32426)
-
-\vspace{1em}
-
-\noindent \textbf{Supervisor(s):} Selim Balcısoy
-
-\vspace{1em}
-
-\noindent \textbf{Date:} March 29, 2026
-
-\vspace{2em}
-
-\noindent ENS 491--492 Proposal Report must contain the following sections (leave section titles unchanged).
-
-\begin{itemize}[leftmargin=1.5em]
-    \item You are required to write clearly and concisely.
-    \item Each part of the proposal could further be improved and updated in your progress reports as you make further progress on your project. Project advisor may have additional requirements for the report.
-\end{itemize}
+\clearpage
 
 \section{ABSTRACT}
 
@@ -120,7 +133,6 @@ Report and advisor alignment & ENS 491/492 deliverables updated each term \\
 \end{tabular}
 \end{center}
 
-\noindent\textit{Task leaders} can be assigned in the schedule (one leader per task).
 
 \subsection{Realistic Constraints}
 
@@ -149,18 +161,18 @@ We align with good practice for \textbf{empirical visualization and HCI research
 
 \section{PROJECT SCHEDULE}
 
-The course requests a Gantt chart. Figure~\ref{fig:ens491_gantt} shows the indicative timeline and task leaders; Table~\ref{tab:schedule} lists the same plan in tabular form. The chart is generated from \texttt{scripts/generate\_gantt.py} so it can be updated as weeks shift. \textit{Delays in evaluation push final write-up; buffer weeks are reserved before advisor milestones.}
+The course requests a Gantt chart. Figure~\ref{fig:ens491_gantt} shows the indicative timeline and task leaders; Table~\ref{tab:schedule} lists the same plan in tabular form. The chart can be updated as weeks shift. \textit{Delays in evaluation push final write-up; buffer weeks are reserved before advisor milestones.}
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\linewidth]{images/ens491_gantt.png}
-    \caption{Indicative Gantt chart for ENS~491 (GPS visualization track): weeks W1--W13, one leader per task. Source: \texttt{scripts/generate\_gantt.py} (\texttt{images/ens491\_gantt.png}).}
+    \caption{Indicative Gantt chart for ENS~491 (GPS visualization track): weeks W1--W13, one leader per task.}
     \label{fig:ens491_gantt}
 \end{figure}
 
 \begin{table}[h]
     \centering
-    \caption{Indicative schedule (adjust with advisor). Task leader = single responsible student (matches Figure~\ref{fig:ens491_gantt}).}
+    \caption{Indicative schedule. Task leader = single responsible student.}
     \label{tab:schedule}
     \small
     \begin{tabular}{@{}lllp{3.2cm}@{}}
