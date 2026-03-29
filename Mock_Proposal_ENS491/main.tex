@@ -114,7 +114,7 @@ This paper is highly useful for our project because it directly studies how unce
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\linewidth]{fig_ranasinghe2019_visualizations.png}
+    \includegraphics[width=\linewidth]{images/fig_ranasinghe2019_visualizations.png}
     \caption{Location uncertainty visualizations compared by Ranasinghe et al.\ for pedestrian navigation under degraded GPS signals \cite{ranasinghe2019visualising}.}
     \label{fig:ranasinghe2019}
 \end{figure}
@@ -127,7 +127,7 @@ This source is highly relevant because it addresses almost the same design probl
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\linewidth]{fig_burigat2011_navigation_uncertainty.png}
+    \includegraphics[width=\linewidth]{images/fig_burigat2011_navigation_uncertainty.png}
     \caption{Alternative uncertainty displays for pedestrian navigation, including circular and street-based encodings \cite{burigat2011pedestrian}.}
     \label{fig:burigat2011}
 \end{figure}
@@ -140,7 +140,7 @@ This paper is very useful for our work because it directly compares glyph-based 
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\linewidth]{fig_mckenzie2016_blue_dot_variants.png}
+    \includegraphics[width=\linewidth]{images/fig_mckenzie2016_blue_dot_variants.png}
     \caption{Alternative blue-dot style visualizations for positional uncertainty judgments \cite{mckenzie2016assessing}.}
     \label{fig:mckenzie2016}
 \end{figure}
@@ -153,7 +153,7 @@ This source is relevant because our project also concerns how people reason abou
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\linewidth]{fig_hegarty2016_location_judgment_displays.png}
+    \includegraphics[width=\linewidth]{images/fig_hegarty2016_location_judgment_displays.png}
     \caption{GPS-like uncertainty representations used for location judgment tasks \cite{hegarty2016where}.}
     \label{fig:hegarty2016}
 \end{figure}
@@ -166,16 +166,11 @@ This paper is useful for our project because it provides an early but highly rel
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\linewidth]{fig_lodha2002_gps_uncertainty_gis.png}
+    \includegraphics[width=\linewidth]{images/fig_lodha2002_gps_uncertainty_gis.png}
     \caption{Example of spatio-temporal GPS uncertainty visualization within a GIS environment \cite{lodha2002visualization}.}
     \label{fig:lodha2002}
 \end{figure}
 
-\subsection{Use of Gemini Deep Research Output}
-
-The Gemini-generated research output should be treated as a \textbf{secondary synthesized source} rather than a primary publication. It may still be useful for identifying themes, candidate references, or terminology related to uncertainty-aware visualization.
-
-\gemininote{If a section is based on the Gemini Deep Research output, it should be explicitly labeled as such, and important claims should ideally be traced back to original academic publications before they are used as core evidence in the final version.}
 
 \section{Possible Visualization Directions}
 
@@ -223,7 +218,7 @@ Together, these two ideas explore two complementary ways of improving uncertaint
     \centering
     \begin{subfigure}{\columnwidth}
         \centering
-        \includegraphics[width=0.95\columnwidth]{directional-edge.jpeg}
+        \includegraphics[width=0.95\columnwidth]{images/directional-edge.jpeg}
         \caption{Probability-weighted boundary concept. The circular uncertainty region is preserved, but the edge is thicker in the parts corresponding to more probable areas.}
         \label{fig:directional_edge}
     \end{subfigure}
@@ -232,7 +227,7 @@ Together, these two ideas explore two complementary ways of improving uncertaint
 
     \begin{subfigure}{\columnwidth}
         \centering
-        \includegraphics[width=0.95\columnwidth]{aeral-density.jpeg}
+        \includegraphics[width=0.95\columnwidth]{images/aeral-density.jpeg}
         \caption{Internal density-based concept. More likely subregions inside the uncertainty circle are shown with stronger contrast or denser shading, not only in a directional sense but also as localized high-probability areas.}
         \label{fig:aerial_density}
     \end{subfigure}
@@ -242,6 +237,62 @@ Together, these two ideas explore two complementary ways of improving uncertaint
 \end{figure}
 
 At this stage, these ideas are still conceptual. However, they provide a useful basis for future prototyping and evaluation. In later stages of the project, we may refine these visual encodings and compare them in terms of interpretability, visual clarity, cognitive load, and usefulness in real map-based interaction scenarios.
+
+\section{Implementation of our Visualization Methods}
+
+\subsection{Input data format}
+
+Our tool reads plain-text exports from the Android \textit{GNSS Logger} application. Each row of interest is a comma-separated line beginning with \texttt{Fix,} and follows the logger's column order (provider, latitude, longitude, altitude, speed, horizontal accuracy, bearing, Unix time in milliseconds, and further fields including vertical accuracy). For visualization we use only a subset: \textbf{latitude, longitude, altitude} for map placement and charts; \textbf{UnixTimeMillis} for temporal ordering; \textbf{AccuracyMeters} and \textbf{VerticalAccuracyMeters} for uncertainty views; and optionally speed and bearing where shown in the detail panel.
+
+We use four prepared \texttt{Fix}-only extracts (each line is one fix). Sizes are summarized in Table~\ref{tab:fix_counts}.
+
+\begin{table}[H]
+    \centering
+    \caption{GNSS Logger \texttt{Fix}-only datasets used in this work.}
+    \label{tab:fix_counts}
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{@{} >{\raggedright\arraybackslash}p{0.62\columnwidth} r @{}}
+        \toprule
+        \textbf{Dataset} & \textbf{Lines} \\
+        \midrule
+        Tuzla Fix Only\newline
+        \scriptsize\texttt{gnss\_log\_2026\_03\_23\_10\_52\_08\_FixOnly.txt} & 1209 \\
+        \texttt{spor merkezi\_FixOnly.txt} & 595 \\
+        \texttt{uc onu\_FixOnly.txt} & 601 \\
+        \texttt{yuruyuske\_FixOnly.txt} & 610 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+A typical \texttt{Fix} row (fields we use are underlined conceptually in the description below) looks like:
+
+\begin{quote}
+\footnotesize
+\raggedright
+\begin{tabular}{@{}l@{}}
+\texttt{Fix,GPS,40.8931388520,29.3753583357,170.0,}\\
+\texttt{0.42999998,4.5,93.2,1774382541000,}\\
+\texttt{0.66,136.0,210952725535317,5.0,0,,,\ldots}
+\end{tabular}
+\end{quote}
+
+\noindent Here \texttt{40.893\ldots} and \texttt{29.375\ldots} are latitude and longitude in degrees; \texttt{170.0} is altitude in meters; \texttt{4.5} is horizontal accuracy (\texttt{AccuracyMeters}); \texttt{1774382541000} is \texttt{UnixTimeMillis}. Additional columns include vertical accuracy and other metadata used selectively in the UI.
+
+\subsection{Web prototype}
+
+We implemented an interactive prototype as a single-page web application (\texttt{gnss\_tuzla\_map\_interactive.html}) that loads Android GNSS Logger \texttt{Fix} lines and visualizes them on a Leaflet map with optional D3-based charts. A public build is hosted on GitHub Pages and can be opened directly in a browser:
+
+\url{https://mufasa-349.github.io/Grad-Project-GPS-Data-Analysis/gnss_tuzla_map_interactive.html}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{images/general-ui.png}
+    \caption{Overview of the interactive GNSS visualization interface: control panel (left), map (top right), and longitude--altitude chart (bottom right).}
+    \label{fig:general_ui}
+\end{figure}
+
+Figure~\ref{fig:general_ui} shows the main layout. The \textbf{left panel} summarizes the loaded dataset (point count, distance-from-first-fix range, accuracy ranges, altitude/longitude extents, and details for a selected point) and hosts the primary controls: \textbf{Data source} selects which prepared \texttt{Fix}-only or combined text file to load; \textbf{Visualization method} switches between the original point view, heatmap variants, and GPS uncertainty (accuracy rings); \textbf{Heatmap cell size} adjusts grid resolution where applicable; \textbf{Reload} refreshes the current file. The \textbf{(i)} button opens a short in-app ``How to use'' dialog. The \textbf{map} shows OpenStreetMap tiles with GNSS fixes overlaid according to the chosen mode (e.g., colored points, heatmaps, or uncertainty circles). The \textbf{lower chart} plots longitude versus altitude with a simple normalized regression line for quick inspection of the vertical profile. The tool is intended for exploratory analysis and comparison of uncertainty-centric views rather than for production navigation.
 
 \section{Conclusion}
 
