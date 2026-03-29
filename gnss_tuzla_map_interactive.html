@@ -251,34 +251,35 @@
       aria-hidden="true"
     >
       <div class="modal-box" role="document">
-        <h2 id="howtoTitle">Nasıl kullanılır</h2>
+        <h2 id="howtoTitle">How to use</h2>
         <ul>
           <li>
-            <strong>Data source</strong>: Hangi FixOnly / birleşik dosyanın yükleneceğini seçer. Değişince veri otomatik yenilenir.
+            <strong>Data source</strong> — Selects which FixOnly / combined file to load. Changing it reloads the data automatically.
           </li>
           <li>
-            <strong>Reload selected file</strong>: Seçili dosyayı tekrar okur (aynı dosyayı tazelemek için).
+            <strong>Reload selected file</strong> — Re-reads the currently selected file (refresh).
           </li>
           <li>
             <strong>Visualization method</strong>:
-            <em>Original</em> tek tek noktalar; <em>Heat Map our idea</em> mavi grid / yoğunluk;
-            <em>Heat Map (Blue-Green-Red)</em> olasılığa göre renkli yumuşak heatmap;
-            <em>GPS Uncertainty (rings + color)</em> yatay doğrulukta yarı saydam halka (renk: iyi yeşil → kötü kırmızı), merkez nokta boyutu dikey doğruluğa göre.
+            <em>Original</em> shows individual points;
+            <em>Heat Map our idea</em> is a blue grid / density heatmap (or route + hover preview when the path moves enough);
+            <em>Heat Map (Blue-Green-Red)</em> is a soft density map with a blue → green → red scale;
+            <em>GPS Uncertainty (rings + color)</em> draws semi-transparent circles by horizontal accuracy (color: green = good → red = poor) and scales the center dot by vertical accuracy.
           </li>
           <li>
-            <strong>Heatmap cell size</strong>: Sadece mavi grid modunda hücre boyutu (daha büyük = daha bloklu görünüm).
+            <strong>Heatmap cell size</strong> — Cell size for the blue <em>Heat Map our idea</em> grid mode (larger = more blocky).
           </li>
           <li>
-            İlk–son nokta arası mesafe 30 m’den fazlaysa rota <strong>koyu kırmızı çizgi</strong> olur; çizgi üzerinde gezerken
-            <strong>i±7</strong> penceresi için önizleme çemberi ve heat görünür. <strong>Current preview radius</strong> o çemberin yarıçapıdır (m).
+            If the distance between the <strong>first and last</strong> fix is <strong>greater than 30 m</strong>, the track is a <strong>dark red line</strong>. Moving the mouse near the line shows a preview for the <strong>i±7</strong> window (circle + heat).
+            <strong>Current preview radius</strong> is that circle’s radius in meters.
           </li>
           <li>
-            Harita kutucukları için internet gerekir; dosyaları görmek için sayfayı yerel sunucudan aç
+            Map tiles need internet. To load files from <code>data/</code>, open this page via a local server
             (<code>python3 -m http.server</code>).
           </li>
         </ul>
         <div class="modal-actions">
-          <button type="button" class="btn" id="howtoCloseBtn">Kapat</button>
+          <button type="button" class="btn" id="howtoCloseBtn">Close</button>
         </div>
       </div>
     </div>
@@ -287,7 +288,7 @@
       <div class="panel">
         <div class="panel-header">
           <h1>GNSS Fix Pins (Tuzla) - Interactive</h1>
-          <button type="button" class="btn btn-icon" id="howtoInfoBtn" title="Nasıl kullanılır" aria-label="Nasıl kullanılır">
+          <button type="button" class="btn btn-icon" id="howtoInfoBtn" title="How to use" aria-label="How to use">
             ⓘ
           </button>
         </div>
@@ -383,13 +384,13 @@
             <div class="k">Data source</div>
             <div class="v">
               <select id="fileSelect">
-                <option value="./gnss_log_2026_03_23_10_52_08_FixOnly.txt" selected>
+                <option value="./data/gnss_log_2026_03_23_10_52_08_FixOnly.txt" selected>
                   Tuzla FixOnly
                 </option>
-                <option value="./spor merkezi_FixOnly.txt">Spor Merkezi FixOnly</option>
-                <option value="./uc onu_FixOnly.txt">Üç Önü FixOnly</option>
-                <option value="./yuruyuske_FixOnly.txt">Yürüyüşke FixOnly</option>
-                <option value="./gnss_fix_combined_sorted_by_unixTimeMillis_2026_03_24.txt">
+                <option value="./data/spor merkezi_FixOnly.txt">Spor Merkezi FixOnly</option>
+                <option value="./data/uc onu_FixOnly.txt">Üç Önü FixOnly</option>
+                <option value="./data/yuruyuske_FixOnly.txt">Yürüyüşke FixOnly</option>
+                <option value="./data/gnss_fix_combined_sorted_by_unixTimeMillis_2026_03_24.txt">
                   Combined Fix (sorted by UnixTimeMillis)
                 </option>
               </select>
@@ -441,7 +442,7 @@
     </div>
 
     <script>
-      const DEFAULT_DATA_PATH = "./gnss_log_2026_03_23_10_52_08_FixOnly.txt";
+      const DEFAULT_DATA_PATH = "./data/gnss_log_2026_03_23_10_52_08_FixOnly.txt";
       // Approx. Tuzla coordinates (given example)
       const DEFAULT_CENTER = { lat: 40.89095, lon: 29.37735 };
 
@@ -1791,11 +1792,11 @@
         render(points);
       });
 
-      // --- How to use (modal): ilk açılış sadece belirtilen hostname'lerde; ⓘ ile her zaman ---
+      // How-to modal: auto-open once on first visit from listed hostnames; ⓘ opens anytime.
       const HOWTO_SHOW_FIRST_VISIT_ON_HOSTS = [
         "127.0.0.1",
         "localhost",
-        // Örnek: sunucuya IP ile girdiğinizde buraya ekleyin, örn. "192.168.1.10"
+        // Add your LAN IP when opening via http://192.168.x.x:port/ ...
       ];
       function howtoStorageKey() {
         return `gnss_tuzla_map_howto_seen:${window.location.hostname}`;
