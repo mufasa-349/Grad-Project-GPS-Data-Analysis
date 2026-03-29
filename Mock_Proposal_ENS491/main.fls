@@ -2,7 +2,7 @@ PWD /Users/mustafabozyel/Github-Desktop/Grad-Project-GPS-Data-Analysis/Mock_Prop
 INPUT /usr/local/texlive/2025basic/texmf.cnf
 INPUT /usr/local/texlive/2025basic/texmf-dist/web2c/texmf.cnf
 INPUT /usr/local/texlive/2025basic/texmf-var/web2c/pdftex/pdflatex.fmt
-INPUT /Users/mustafabozyel/Github-Desktop/Grad-Project-GPS-Data-Analysis/Mock_Proposal_ENS491/main.tex
+INPUT main.tex
 OUTPUT main.log
 INPUT /usr/local/texlive/2025basic/texmf-dist/tex/latex/ieeetran/IEEEtran.cls
 INPUT /usr/local/texlive/2025basic/texmf-dist/tex/latex/ieeetran/IEEEtran.cls

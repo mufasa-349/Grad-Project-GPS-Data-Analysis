@@ -1,9 +1,9 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.11.24)  29 MAR 2026 14:02
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.11.24)  29 MAR 2026 14:09
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
  %&-line parsing enabled.
-**/Users/mustafabozyel/Github-Desktop/Grad-Project-GPS-Data-Analysis/Mock_Proposal_ENS491/main.tex
+**/Users/mustafabozyel/Github-Desktop/Grad-Project-GPS-Data-Analysis/Mock_Proposal_ENS491/main
 (/Users/mustafabozyel/Github-Desktop/Grad-Project-GPS-Data-Analysis/Mock_Proposal_ENS491/main.tex
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
@@ -404,33 +404,33 @@ Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 28
 )
 \Hy@SectionHShift=\skip58
 )
-Package hyperref Info: Option `colorlinks' set `true' on input line 24.
+Package hyperref Info: Option `colorlinks' set `true' on input line 26.
  (/usr/local/texlive/2025basic/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
 File: l3backend-pdftex.def 2024-05-08 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count312
 \l__pdf_internal_box=\box61
-) (./main.aux)
+)
+No file main.aux.
 \openout1 = `main.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 37.
-LaTeX Font Info:    ... okay on input line 37.
-
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 39.
+LaTeX Font Info:    ... okay on input line 39.
 -- Lines per column: 56 (exact).
 (/usr/local/texlive/2025basic/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
@@ -454,82 +454,130 @@ File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Live
 Package caption Info: Begin \AtBeginDocument code.
 Package caption Info: hyperref package is loaded.
 Package caption Info: End \AtBeginDocument code.
-Package hyperref Info: Link coloring ON on input line 37.
+Package hyperref Info: Link coloring ON on input line 39.
  (./main.out) (./main.out)
 \@outlinefile=\write3
 \openout3 = `main.out'.
 
 
-Underfull \hbox (badness 7030) in paragraph at lines 66--67
+Underfull \hbox (badness 7030) in paragraph at lines 68--69
 []\T1/ptm/m/n/10 The broader grad-u-a-tion project topic is \T1/ptm/m/it/10 AI-Driven
  []
 
 
 
-LaTeX Font Info:    Trying to load font information for U+msa on input line 97.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 99.
 (/usr/local/texlive/2025basic/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 97.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 99.
  (/usr/local/texlive/2025basic/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
+
+LaTeX Warning: Citation `ranasinghe2019visualising' on page 1 undefined on input line 113.
+
+
 
 [1{/usr/local/texlive/2025basic/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/local/texlive/2025basic/texmf-dist/fonts/enc/dvips/base/8r.enc}
 
 
 ]
-<images/fig_ranasinghe2019_visualizations.png, id=102, 550.055pt x 669.50125pt>
+<images/fig_ranasinghe2019_visualizations.png, id=105, 550.055pt x 669.50125pt>
 File: images/fig_ranasinghe2019_visualizations.png Graphic file (type png)
 <use images/fig_ranasinghe2019_visualizations.png>
-Package pdftex.def Info: images/fig_ranasinghe2019_visualizations.png  used on input line 117.
+Package pdftex.def Info: images/fig_ranasinghe2019_visualizations.png  used on input line 119.
 (pdftex.def)             Requested size: 252.0pt x 306.71777pt.
 
-Underfull \hbox (badness 1540) in paragraph at lines 118--118
+
+LaTeX Warning: Citation `ranasinghe2019visualising' on page 2 undefined on input line 120.
+
+
+LaTeX Warning: Citation `ranasinghe2019visualising' on page 2 undefined on input line 120.
+
+
+Underfull \hbox (badness 1540) in paragraph at lines 120--120
 []\T1/ptm/m/n/10 Fig. 1: |Lo-ca-tion un-cer-tainty vi-su-al-iza-tions com-pared by
  []
+
+
+LaTeX Warning: Citation `burigat2011pedestrian' on page 2 undefined on input line 126.
 
 <images/fig_burigat2011_navigation_uncertainty.png, id=107, 326.21875pt x 469.755pt>
 File: images/fig_burigat2011_navigation_uncertainty.png Graphic file (type png)
 <use images/fig_burigat2011_navigation_uncertainty.png>
-Package pdftex.def Info: images/fig_burigat2011_navigation_uncertainty.png  used on input line 130.
+Package pdftex.def Info: images/fig_burigat2011_navigation_uncertainty.png  used on input line 132.
 (pdftex.def)             Requested size: 252.0pt x 362.89517pt.
 
+LaTeX Warning: Citation `burigat2011pedestrian' on page 2 undefined on input line 133.
 
-<images/fig_mckenzie2016_blue_dot_variants.png, id=111, 504.88625pt x 340.27126pt>
+
+LaTeX Warning: Citation `burigat2011pedestrian' on page 2 undefined on input line 133.
+
+
+
+
+LaTeX Warning: Citation `mckenzie2016assessing' on page 2 undefined on input line 139.
+
+<images/fig_mckenzie2016_blue_dot_variants.png, id=108, 504.88625pt x 340.27126pt>
 File: images/fig_mckenzie2016_blue_dot_variants.png Graphic file (type png)
 <use images/fig_mckenzie2016_blue_dot_variants.png>
-Package pdftex.def Info: images/fig_mckenzie2016_blue_dot_variants.png  used on input line 143.
+Package pdftex.def Info: images/fig_mckenzie2016_blue_dot_variants.png  used on input line 145.
 (pdftex.def)             Requested size: 252.0pt x 169.83925pt.
+
+LaTeX Warning: Citation `mckenzie2016assessing' on page 2 undefined on input line 146.
+
+
+LaTeX Warning: Citation `mckenzie2016assessing' on page 2 undefined on input line 146.
+
+
+LaTeX Warning: Citation `hegarty2016where' on page 2 undefined on input line 152.
+
 
 
 [2 <./images/fig_ranasinghe2019_visualizations.png> <./images/fig_burigat2011_navigation_uncertainty.png>]
-<images/fig_hegarty2016_location_judgment_displays.png, id=126, 519.9425pt x 256.96pt>
+<images/fig_hegarty2016_location_judgment_displays.png, id=117, 519.9425pt x 256.96pt>
 File: images/fig_hegarty2016_location_judgment_displays.png Graphic file (type png)
 <use images/fig_hegarty2016_location_judgment_displays.png>
-Package pdftex.def Info: images/fig_hegarty2016_location_judgment_displays.png  used on input line 156.
+Package pdftex.def Info: images/fig_hegarty2016_location_judgment_displays.png  used on input line 158.
 (pdftex.def)             Requested size: 252.0pt x 124.53918pt.
 
 
-<images/fig_lodha2002_gps_uncertainty_gis.png, id=130, 616.3025pt x 606.265pt>
+LaTeX Warning: Citation `hegarty2016where' on page 3 undefined on input line 159.
+
+
+LaTeX Warning: Citation `hegarty2016where' on page 3 undefined on input line 159.
+
+
+LaTeX Warning: Citation `lodha2002visualization' on page 3 undefined on input line 165.
+
+
+
+<images/fig_lodha2002_gps_uncertainty_gis.png, id=118, 616.3025pt x 606.265pt>
 File: images/fig_lodha2002_gps_uncertainty_gis.png Graphic file (type png)
 <use images/fig_lodha2002_gps_uncertainty_gis.png>
-Package pdftex.def Info: images/fig_lodha2002_gps_uncertainty_gis.png  used on input line 169.
+Package pdftex.def Info: images/fig_lodha2002_gps_uncertainty_gis.png  used on input line 171.
 (pdftex.def)             Requested size: 252.0pt x 247.89494pt.
+
+LaTeX Warning: Citation `lodha2002visualization' on page 3 undefined on input line 172.
+
+
+LaTeX Warning: Citation `lodha2002visualization' on page 3 undefined on input line 172.
+
 
 
 [3 <./images/fig_mckenzie2016_blue_dot_variants.png> <./images/fig_hegarty2016_location_judgment_displays.png> <./images/fig_lodha2002_gps_uncertainty_gis.png>]
-<images/directional-edge.jpeg, id=145, 1879.02pt x 1814.78pt>
+<images/directional-edge.jpeg, id=129, 1879.02pt x 1814.78pt>
 File: images/directional-edge.jpeg Graphic file (type jpg)
 <use images/directional-edge.jpeg>
-Package pdftex.def Info: images/directional-edge.jpeg  used on input line 221.
+Package pdftex.def Info: images/directional-edge.jpeg  used on input line 223.
 (pdftex.def)             Requested size: 239.39923pt x 231.19447pt.
-<images/aeral-density.jpeg, id=146, 1947.275pt x 1646.15pt>
+<images/aeral-density.jpeg, id=130, 1947.275pt x 1646.15pt>
 File: images/aeral-density.jpeg Graphic file (type jpg)
 <use images/aeral-density.jpeg>
-Package pdftex.def Info: images/aeral-density.jpeg  used on input line 230.
+Package pdftex.def Info: images/aeral-density.jpeg  used on input line 232.
 (pdftex.def)             Requested size: 239.39923pt x 202.37729pt.
-LaTeX Font Info:    Trying to load font information for T1+pcr on input line 245.
+LaTeX Font Info:    Trying to load font information for T1+pcr on input line 247.
  (/usr/local/texlive/2025basic/texmf-dist/tex/latex/psnfss/t1pcr.fd
 File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
 )
@@ -537,51 +585,61 @@ File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
 
 
 [4 <./images/directional-edge.jpeg> <./images/aeral-density.jpeg>]
-Overfull \hbox (11.76111pt too wide) in paragraph at lines 259--260
+
+LaTeX Warning: Reference `tab:fix_counts' on page 5 undefined on input line 249.
+
+
+Overfull \hbox (11.76111pt too wide) in paragraph at lines 261--262
 \T1/pcr/m/n/7 gnss_log_2026_03_23_10_52_08_FixOnly.txt|  
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 284--285
+Underfull \hbox (badness 10000) in paragraph at lines 286--287
 []\T1/ptm/m/n/10 We im-ple-mented an in-ter-ac-tive pro-to-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 284--285
+Underfull \hbox (badness 10000) in paragraph at lines 286--287
 \T1/ptm/m/n/10 type as a single-page web ap-pli-ca-tion
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 284--285
+Underfull \hbox (badness 10000) in paragraph at lines 286--287
 \T1/ptm/m/n/10 (\T1/pcr/m/n/10 gnss_tuzla_map_interactive.html\T1/ptm/m/n/10 ) that loads
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 286--287
+Underfull \hbox (badness 10000) in paragraph at lines 288--289
 [][][]$\T1/ptm/m/n/10 https : / / mufasa-[]349 . github . io /
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 286--287
+Underfull \hbox (badness 10000) in paragraph at lines 288--289
 \T1/ptm/m/n/10 Grad-[]Project-[]GPS-[]Data-[]Analysis / gnss _ tuzla _ map _
  []
 
-<images/general-ui.png, id=155, 1445.4pt x 813.0375pt>
+<images/general-ui.png, id=138, 1445.4pt x 813.0375pt>
 File: images/general-ui.png Graphic file (type png)
 <use images/general-ui.png>
-Package pdftex.def Info: images/general-ui.png  used on input line 290.
+Package pdftex.def Info: images/general-ui.png  used on input line 292.
 (pdftex.def)             Requested size: 252.0pt x 141.75023pt.
-<images/yuruyuske-original.png, id=157, 931.48pt x 778.91pt>
+
+LaTeX Warning: Reference `fig:general_ui' on page 5 undefined on input line 297.
+
+<images/yuruyuske-original.png, id=139, 931.48pt x 778.91pt>
 File: images/yuruyuske-original.png Graphic file (type png)
 <use images/yuruyuske-original.png>
-Package pdftex.def Info: images/yuruyuske-original.png  used on input line 299.
+Package pdftex.def Info: images/yuruyuske-original.png  used on input line 301.
 (pdftex.def)             Requested size: 252.0pt x 210.72449pt.
 
+LaTeX Warning: Reference `fig:yuruyuske_original' on page 5 undefined on input line 306.
 
-<images/uc-onu-original.png, id=159, 786.94pt x 779.41188pt>
+
+
+<images/uc-onu-original.png, id=140, 786.94pt x 779.41188pt>
 File: images/uc-onu-original.png Graphic file (type png)
 <use images/uc-onu-original.png>
-Package pdftex.def Info: images/uc-onu-original.png  used on input line 310.
+Package pdftex.def Info: images/uc-onu-original.png  used on input line 312.
 (pdftex.def)             Requested size: 252.0pt x 249.5834pt.
 
 Underfull \vbox (badness 4013) has occurred while \output is active []
@@ -589,20 +647,20 @@ Underfull \vbox (badness 4013) has occurred while \output is active []
 
 
 [5 <./images/general-ui.png> <./images/yuruyuske-original.png>]
-<images/uc-onu-heatmap-our-idea.png, id=172, 786.94pt x 788.9475pt>
+<images/uc-onu-heatmap-our-idea.png, id=152, 786.94pt x 788.9475pt>
 File: images/uc-onu-heatmap-our-idea.png Graphic file (type png)
 <use images/uc-onu-heatmap-our-idea.png>
-Package pdftex.def Info: images/uc-onu-heatmap-our-idea.png  used on input line 317.
+Package pdftex.def Info: images/uc-onu-heatmap-our-idea.png  used on input line 319.
 (pdftex.def)             Requested size: 252.0pt x 252.63689pt.
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
 
-<images/uc-onu-colored-heat-map.png, id=173, 615.29875pt x 490.83376pt>
+<images/uc-onu-colored-heat-map.png, id=153, 615.29875pt x 490.83376pt>
 File: images/uc-onu-colored-heat-map.png Graphic file (type png)
 <use images/uc-onu-colored-heat-map.png>
-Package pdftex.def Info: images/uc-onu-colored-heat-map.png  used on input line 324.
+Package pdftex.def Info: images/uc-onu-colored-heat-map.png  used on input line 326.
 (pdftex.def)             Requested size: 252.0pt x 201.01845pt.
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
@@ -610,42 +668,132 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
 [6 <./images/uc-onu-original.png> <./images/uc-onu-heatmap-our-idea.png>]
-Underfull \hbox (badness 10000) in paragraph at lines 331--332
+
+LaTeX Warning: Reference `fig:uc_onu_original' on page 7 undefined on input line 331.
+
+
+LaTeX Warning: Reference `fig:uc_onu_heatmap_bgr' on page 7 undefined on input line 331.
+
+
+LaTeX Warning: Reference `fig:uc_onu_original' on page 7 undefined on input line 331.
+
+
+LaTeX Warning: Reference `fig:uc_onu_heatmap_our_idea' on page 7 undefined on input line 331.
+
+
+LaTeX Warning: Reference `fig:uc_onu_heatmap_bgr' on page 7 undefined on input line 331.
+
+
+LaTeX Warning: Reference `fig:yuruyuske_original' on page 7 undefined on input line 333.
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 333--334
 []\T1/ptm/m/n/10 Finally, we re-turn to the walk-ing dataset
  []
 
-<images/yuruyuske-heatmap-colored.png, id=189, 790.955pt x 789.95125pt>
+<images/yuruyuske-heatmap-colored.png, id=164, 790.955pt x 789.95125pt>
 File: images/yuruyuske-heatmap-colored.png Graphic file (type png)
 <use images/yuruyuske-heatmap-colored.png>
-Package pdftex.def Info: images/yuruyuske-heatmap-colored.png  used on input line 335.
+Package pdftex.def Info: images/yuruyuske-heatmap-colored.png  used on input line 337.
 (pdftex.def)             Requested size: 252.0pt x 251.68062pt.
+
+LaTeX Warning: Reference `fig:uc_onu_heatmap_bgr' on page 7 undefined on input line 338.
+
+
+LaTeX Warning: Reference `fig:uc_onu_heatmap_bgr' on page 7 undefined on input line 338.
+
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
 
-<images/yuruyuske-ai-idea.png, id=192, 925.95938pt x 616.80438pt>
+<images/yuruyuske-ai-idea.png, id=165, 925.95938pt x 616.80438pt>
 File: images/yuruyuske-ai-idea.png Graphic file (type png)
 <use images/yuruyuske-ai-idea.png>
-Package pdftex.def Info: images/yuruyuske-ai-idea.png  used on input line 342.
+Package pdftex.def Info: images/yuruyuske-ai-idea.png  used on input line 344.
 (pdftex.def)             Requested size: 252.0pt x 167.85704pt.
 
-Underfull \hbox (badness 10000) in paragraph at lines 343--343
+Underfull \hbox (badness 10000) in paragraph at lines 345--345
 []\T1/ptm/m/n/10 Fig. 13: |Ex-ploratory vi-su-al-iza-tion for
  []
 
 
-Underfull \hbox (badness 2653) in paragraph at lines 343--343
+Underfull \hbox (badness 2653) in paragraph at lines 345--345
 \T1/pcr/m/n/10 yuruyuske_FixOnly \T1/ptm/m/n/10 pro-duced from an \T1/ptm/m/it/10 AI-suggested
  []
+
+
+LaTeX Warning: Reference `fig:yuruyuske_heatmap_bgr' on page 7 undefined on input line 349.
+
+
+LaTeX Warning: Reference `fig:yuruyuske_original' on page 7 undefined on input line 349.
+
+
+LaTeX Warning: Reference `fig:yuruyuske_ai_idea' on page 7 undefined on input line 349.
+
+
+LaTeX Warning: Citation `Zheng2015' on page 7 undefined on input line 353.
+
+
+LaTeX Warning: Citation `Sobral2019' on page 7 undefined on input line 353.
 
 
 
 [7 <./images/uc-onu-colored-heat-map.png> <./images/yuruyuske-heatmap-colored.png> <./images/yuruyuske-ai-idea.png>]
 
+LaTeX Warning: Citation `Sobral2019' on page 8 undefined on input line 355.
 
 
-[8
+LaTeX Warning: Citation `Fadloun2022' on page 8 undefined on input line 355.
+
+
+LaTeX Warning: Citation `Sobral2019' on page 8 undefined on input line 355.
+
+
+LaTeX Warning: Citation `Feng2021' on page 8 undefined on input line 355.
+
+
+LaTeX Warning: Citation `Fadloun2022' on page 8 undefined on input line 355.
+
+
+LaTeX Warning: Citation `Zheng2015' on page 8 undefined on input line 357.
+
+
+LaTeX Warning: Citation `MillardBall2019' on page 8 undefined on input line 357.
+
+
+LaTeX Warning: Citation `Feng2021' on page 8 undefined on input line 359.
+
+
+LaTeX Warning: Citation `Fadloun2022' on page 8 undefined on input line 359.
+
+
+
+
+LaTeX Warning: Citation `Zheng2015' on page 8 undefined on input line 361.
+
+
+LaTeX Warning: Citation `MillardBall2019' on page 8 undefined on input line 361.
+
+
+LaTeX Warning: Citation `Zheng2015' on page 8 undefined on input line 361.
+
+
+LaTeX Warning: Citation `MillardBall2019' on page 8 undefined on input line 361.
+
+
+LaTeX Warning: Citation `Sobral2019' on page 8 undefined on input line 361.
+
+
+LaTeX Warning: Citation `Fadloun2022' on page 8 undefined on input line 361.
+
+
+
+[8]
+
+
+
+[9
 
 ] (./main.bbl)
 
@@ -663,7 +811,7 @@ Before submitting the final camera ready copy, remember to:
 
 
 
-[9
+[10
 
 
 ] (./main.aux)
@@ -671,22 +819,29 @@ Before submitting the final camera ready copy, remember to:
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
+
+
+LaTeX Warning: There were undefined references.
+
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
 Package rerunfilecheck Info: File `main.out' has not changed.
-(rerunfilecheck)             Checksum: 9197C902C6ADF2A9B51D743A5A0D59BD;5728.
+(rerunfilecheck)             Checksum: 4070F6ABFC90FC1F4D1236E24169A62C;6174.
  ) 
 Here is how much of TeX's memory you used:
- 13578 strings out of 474662
- 219259 string characters out of 5751108
- 630738 words of memory out of 5000000
- 36386 multiletter control sequences out of 15000+600000
+ 13588 strings out of 474662
+ 219390 string characters out of 5751108
+ 626187 words of memory out of 5000000
+ 36391 multiletter control sequences out of 15000+600000
  671085 words of font info for 161 fonts, out of 8000000 for 9000
  319 hyphenation exceptions out of 8191
- 75i,11n,79p,1217b,514s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,11n,79p,1453b,514s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (9 pages, 5942888 bytes).
+Output written on main.pdf (10 pages, 5948142 bytes).
 PDF statistics:
- 262 PDF objects out of 1000 (max. 8388607)
- 202 compressed objects within 3 object streams
- 53 named destinations out of 1000 (max. 500000)
- 239 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 246 PDF objects out of 1000 (max. 8388607)
+ 192 compressed objects within 2 object streams
+ 60 named destinations out of 1000 (max. 500000)
+ 247 words of extra memory for PDF output out of 10000 (max. 10000000)
 

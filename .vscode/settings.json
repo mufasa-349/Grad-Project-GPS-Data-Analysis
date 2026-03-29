@@ -1,0 +1,25 @@
+{
+  "latex-workshop.latex.rootFile": "Mock_Proposal_ENS491/main.tex",
+  "latex-workshop.latex.recipe.default": "latexmk (latexmkrc)",
+  "latex-workshop.latex.tools": [
+    {
+      "name": "latexmk",
+      "command": "latexmk",
+      "args": [
+        "-synctex=1",
+        "-interaction=nonstopmode",
+        "-file-line-error",
+        "-pdf",
+        "-cd",
+        "%DOC%"
+      ],
+      "env": {}
+    }
+  ],
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "latexmk (latexmkrc)",
+      "tools": ["latexmk"]
+    }
+  ]
+}
