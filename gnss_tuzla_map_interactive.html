@@ -255,6 +255,7 @@
         <ul>
           <li>
             <strong>Data source</strong> — Selects which FixOnly / combined file to load. Changing it reloads the data automatically.
+            <strong>Real vs raw GPS</strong> loads the OSM reference polyline (<code>Openstreetmap-reference-data_latlon_by_time.txt</code>) together with raw fixes (<code>yürümece-gnss_FixOnly.txt</code>); use the checkboxes to hide either layer.
           </li>
           <li>
             <strong>Reload selected file</strong> — Re-reads the currently selected file (refresh).
@@ -393,7 +394,26 @@
                 <option value="./data/gnss_fix_combined_sorted_by_unixTimeMillis_2026_03_24.txt">
                   Combined Fix (sorted by UnixTimeMillis)
                 </option>
+                <option value="__COMPARE_REAL_VS_RAW__">
+                  Real vs raw GPS (OSM reference line + yürümece Fix)
+                </option>
               </select>
+            </div>
+          </div>
+
+          <div class="row" id="compareLayerRow" style="display: none">
+            <div class="k">Compare layers</div>
+            <div class="v" style="text-align: left; max-width: 100%">
+              <label class="small" style="display: block; margin: 4px 0"
+                ><input type="checkbox" id="showOsmRefLayer" checked /> Show OSM reference (line + points)</label
+              >
+              <label class="small" style="display: block; margin: 4px 0"
+                ><input type="checkbox" id="showRawGnssLayer" checked /> Show raw GNSS Fix points</label
+              >
+              <div class="small" style="margin-top: 8px; color: var(--muted); line-height: 1.35">
+                Reference: <code>Openstreetmap-reference-data_latlon_by_time.txt</code> (GPX track). Raw:
+                <code>yürümece-gnss_FixOnly.txt</code>. Same walk (~1 Hz); clocks may differ by a few seconds.
+              </div>
             </div>
           </div>
 
@@ -474,6 +494,9 @@
         manualLoadWrap: document.getElementById("manualLoadWrap"),
         manualFile: document.getElementById("manualFile"),
         errorBox: document.getElementById("errorBox"),
+        compareLayerRow: document.getElementById("compareLayerRow"),
+        showOsmRefLayer: document.getElementById("showOsmRefLayer"),
+        showRawGnssLayer: document.getElementById("showRawGnssLayer"),
       };
 
       const graphSvg = d3.select("#coordChart");
@@ -545,6 +568,45 @@
         }
 
         return points;
+      }
+
+      /** Tab-separated: ISO time, lat, lon (from GPX export). */
+      function parseReferenceLatLonByTime(text) {
+        const rows = [];
+        for (const line of text.split(/\r?\n/)) {
+          const t = line.trim();
+          if (!t) continue;
+          const parts = t.split(/\t/);
+          if (parts.length < 3) continue;
+          const iso = parts[0].trim();
+          const lat = Number(parts[1]);
+          const lon = Number(parts[2]);
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+          let unixMs = null;
+          try {
+            const d = Date.parse(iso);
+            if (Number.isFinite(d)) unixMs = d;
+          } catch {
+            /* ignore */
+          }
+          rows.push({ lat, lon, isoTime: iso, unixTimeMillis: unixMs, source: "osm_ref" });
+        }
+        return rows;
+      }
+
+      const COMPARE_REF_URL = "./data/Openstreetmap-reference-data_latlon_by_time.txt";
+      const COMPARE_RAW_URL = "./data/yürümece-gnss_FixOnly.txt";
+
+      let lastRefRows = [];
+      let lastRawPoints = [];
+
+      function isCompareMode() {
+        return ui.fileSelect && ui.fileSelect.value === "__COMPARE_REAL_VS_RAW__";
+      }
+
+      function setVizControlsDisabledForCompare(disabled) {
+        if (ui.vizMethod) ui.vizMethod.disabled = disabled;
+        if (ui.heatCellSize) ui.heatCellSize.disabled = disabled;
       }
 
       const map = L.map("map", { zoomControl: true, preferCanvas: true }).setView(
@@ -1136,7 +1198,180 @@
         },
       });
 
+      function renderComparison(refRows, rawPoints) {
+        lastRefRows = refRows || [];
+        lastRawPoints = rawPoints || [];
+        lastPoints = lastRawPoints;
+        layerGroup.clearLayers();
+        clearRouteInteraction();
+        if (heatLayer) {
+          map.removeLayer(heatLayer);
+          heatLayer = null;
+        }
+        if (heatCircle) {
+          map.removeLayer(heatCircle);
+          heatCircle = null;
+        }
+        clearError();
+
+        const showRef = ui.showOsmRefLayer ? ui.showOsmRefLayer.checked : true;
+        const showRaw = ui.showRawGnssLayer ? ui.showRawGnssLayer.checked : true;
+
+        ui.count.textContent =
+          showRef && showRaw
+            ? `Ref ${lastRefRows.length} · Raw ${lastRawPoints.length}`
+            : showRef
+              ? `Ref ${lastRefRows.length}`
+              : `Raw ${lastRawPoints.length}`;
+
+        ensureDerivedMetrics(lastRawPoints);
+
+        const accVals = lastRawPoints.map((d) => d.accuracy).filter((v) => v !== null && Number.isFinite(v));
+        const hasAcc = accVals.length > 0;
+        const accMin = hasAcc ? d3.min(accVals) : 0;
+        const accMax = hasAcc ? d3.max(accVals) : 1;
+        const lonExtent = lastRawPoints.length
+          ? d3.extent(lastRawPoints, (d) => d.lon)
+          : [0, 0];
+        const altExtent = lastRawPoints.length
+          ? d3.extent(lastRawPoints, (d) => d.alt)
+          : [0, 0];
+
+        ui.accRange.textContent = hasAcc ? `${fmtNum(accMin, 3)} / ${fmtNum(accMax, 3)}` : "-";
+        ui.lonRange.textContent =
+          lastRawPoints.length > 0
+            ? `${fmtNum(lonExtent[0], 6)} / ${fmtNum(lonExtent[1], 6)}`
+            : "-";
+        ui.altRange.textContent =
+          lastRawPoints.length > 0
+            ? `${fmtNum(altExtent[0], 3)} / ${fmtNum(altExtent[1], 3)}`
+            : "-";
+
+        if (lastRawPoints.length > 0) {
+          const distVals = lastRawPoints
+            .map((d) => d.distFromFirstMeters)
+            .filter((v) => v !== null && Number.isFinite(v));
+          const distMin = distVals.length > 0 ? d3.min(distVals) : 0;
+          const distMax = distVals.length > 0 ? d3.max(distVals) : 0;
+          ui.distRange.textContent = `${fmtNum(distMin, 2)} / ${fmtNum(distMax, 2)} m`;
+        } else {
+          ui.distRange.textContent = "-";
+        }
+        ui.previewRadius.textContent = "-";
+
+        let colorByDistance = () => "rgba(249,115,22,0.9)";
+        if (lastRawPoints.length > 0) {
+          const distVals = lastRawPoints
+            .map((d) => d.distFromFirstMeters)
+            .filter((v) => v !== null && Number.isFinite(v));
+          const distMin = distVals.length > 0 ? d3.min(distVals) : 0;
+          const distMax = distVals.length > 0 ? d3.max(distVals) : 0;
+          colorByDistance = d3
+            .scaleSequential(d3.interpolateRgb("#fbbf24", "#dc2626"))
+            .domain([distMin, distMax]);
+        }
+
+        const radiusForAccuracy = (a) => {
+          if (a === null || !Number.isFinite(a)) return 4;
+          return Math.max(3, Math.min(28, a * 2.5));
+        };
+
+        if (showRef && lastRefRows.length > 1) {
+          const latlngs = lastRefRows.map((r) => [r.lat, r.lon]);
+          L.polyline(latlngs, {
+            color: "#22d3ee",
+            weight: 5,
+            opacity: 0.92,
+            lineJoin: "round",
+            lineCap: "round",
+          }).addTo(layerGroup);
+        }
+
+        if (showRef) {
+          for (let i = 0; i < lastRefRows.length; i++) {
+            const r = lastRefRows[i];
+            const m = L.circleMarker([r.lat, r.lon], {
+              radius: 4,
+              color: "rgba(255,255,255,0.65)",
+              weight: 1,
+              fillColor: "#0e7490",
+              fillOpacity: 0.95,
+            });
+            const t = r.isoTime || "";
+            m.bindPopup(
+              `<div class="tooltip"><div><b>OSM reference</b></div><div><b>Time</b>: ${t}</div></div>`,
+              { maxWidth: 280 }
+            );
+            m.addTo(layerGroup);
+          }
+        }
+
+        if (showRaw) {
+          for (const p of lastRawPoints) {
+            const fill =
+              p.distFromFirstMeters === null || !Number.isFinite(p.distFromFirstMeters)
+                ? "rgba(249,115,22,0.85)"
+                : colorByDistance(p.distFromFirstMeters);
+            const stroke = hasAcc ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.35)";
+            const marker = L.circleMarker([p.lat, p.lon], {
+              radius: radiusForAccuracy(p.accuracy),
+              color: stroke,
+              weight: 1,
+              fillColor: fill,
+              fillOpacity: 0.78,
+            });
+            const popupHtml = `
+            <div class="tooltip">
+              <div><b>Raw GNSS Fix</b></div>
+              <div><b>Latitude</b>: ${fmtNum(p.lat, 6)}</div>
+              <div><b>Longitude</b>: ${fmtNum(p.lon, 6)}</div>
+              <div><b>Altitude</b>: ${fmtNum(p.alt, 3)} m</div>
+              <div><b>Distance from first</b>: ${
+                p.distFromFirstMeters === null ? "-" : fmtNum(p.distFromFirstMeters, 2) + " m"
+              }</div>
+              <div><b>AccuracyMeters</b>: ${p.accuracy === null ? "-" : fmtNum(p.accuracy, 3) + " m"}</div>
+              <div><b>UnixTimeMillis</b>: ${p.unixTimeMillis === null ? "-" : fmtNum(p.unixTimeMillis, 0)}</div>
+              <div><b>ISO (UTC)</b>: ${p.unixTimeMillis === null ? "-" : fmtISOFromMillis(p.unixTimeMillis)}</div>
+            </div>
+          `;
+            marker.bindPopup(popupHtml, { maxWidth: 320 });
+            marker.on("mouseover", () => {
+              setSelected(p);
+              marker.setStyle({ weight: 2, fillOpacity: 0.95 });
+            });
+            marker.on("mouseout", () => {
+              marker.setStyle({ weight: 1, fillOpacity: 0.78 });
+            });
+            marker.on("click", () => {
+              marker.openPopup();
+              setSelected(p);
+            });
+            layerGroup.addLayer(marker);
+          }
+        }
+
+        const boundsPts = [];
+        if (showRef) lastRefRows.forEach((r) => boundsPts.push([r.lat, r.lon]));
+        if (showRaw) lastRawPoints.forEach((p) => boundsPts.push([p.lat, p.lon]));
+        if (boundsPts.length > 0) {
+          map.fitBounds(L.latLngBounds(boundsPts).pad(0.06), { maxZoom: 21 });
+        } else {
+          map.setView([DEFAULT_CENTER.lat, DEFAULT_CENTER.lon], 17);
+        }
+
+        if (lastRawPoints.length > 0) {
+          setSelected(lastRawPoints[0]);
+          renderCoordGraph(lastRawPoints);
+        } else {
+          graphSvg.selectAll("*").remove();
+        }
+      }
+
       function render(points) {
+        if (isCompareMode() && lastRefRows.length && lastRawPoints.length) {
+          renderComparison(lastRefRows, lastRawPoints);
+          return;
+        }
         lastPoints = points || [];
         layerGroup.clearLayers();
         clearRouteInteraction();
@@ -1748,14 +1983,41 @@
         ui.manualLoadWrap.style.display = "none";
         clearError();
 
+        if (ui.compareLayerRow) {
+          ui.compareLayerRow.style.display = isCompareMode() ? "grid" : "none";
+        }
+        setVizControlsDisabledForCompare(isCompareMode());
+
         try {
           const dataPath = ui.fileSelect ? ui.fileSelect.value : DEFAULT_DATA_PATH;
+
+          if (dataPath === "__COMPARE_REAL_VS_RAW__") {
+            const refUrl = new URL(COMPARE_REF_URL, window.location.href).toString();
+            const rawUrl = new URL(COMPARE_RAW_URL, window.location.href).toString();
+            const [resRef, resRaw] = await Promise.all([
+              fetch(refUrl, { cache: "no-store" }),
+              fetch(rawUrl, { cache: "no-store" }),
+            ]);
+            if (!resRef.ok) throw new Error(`Reference: HTTP ${resRef.status} ${resRef.statusText}`);
+            if (!resRaw.ok) throw new Error(`Raw GNSS: HTTP ${resRaw.status} ${resRaw.statusText}`);
+            const textRef = await resRef.text();
+            const textRaw = await resRaw.text();
+            const refRows = parseReferenceLatLonByTime(textRef);
+            const rawPoints = parseFixOnlyText(textRaw);
+            if (refRows.length === 0) throw new Error("Reference file has no valid lat/lon rows.");
+            if (rawPoints.length === 0) throw new Error("Raw Fix file has no Fix lines.");
+            renderComparison(refRows, rawPoints);
+            return;
+          }
+
           // Resolve relative paths safely (handles spaces and special chars).
           const dataUrl = new URL(dataPath, window.location.href).toString();
           const res = await fetch(dataUrl, { cache: "no-store" });
           if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
           const text = await res.text();
           const points = parseFixOnlyText(text);
+          lastRefRows = [];
+          lastRawPoints = [];
           render(points);
         } catch (err) {
           const hint =
@@ -1769,7 +2031,22 @@
 
       ui.reloadBtn.addEventListener("click", loadDefaultText);
       if (ui.fileSelect) ui.fileSelect.addEventListener("change", loadDefaultText);
-      if (ui.vizMethod) ui.vizMethod.addEventListener("change", () => render(lastPoints));
+      if (ui.showOsmRefLayer) {
+        ui.showOsmRefLayer.addEventListener("change", () => {
+          if (isCompareMode()) renderComparison(lastRefRows, lastRawPoints);
+        });
+      }
+      if (ui.showRawGnssLayer) {
+        ui.showRawGnssLayer.addEventListener("change", () => {
+          if (isCompareMode()) renderComparison(lastRefRows, lastRawPoints);
+        });
+      }
+      if (ui.vizMethod) {
+        ui.vizMethod.addEventListener("change", () => {
+          if (isCompareMode()) renderComparison(lastRefRows, lastRawPoints);
+          else render(lastPoints);
+        });
+      }
       if (ui.heatCellSize) {
         const sync = () => {
           if (ui.heatCellSizeLabel) ui.heatCellSizeLabel.textContent = String(ui.heatCellSize.value);
