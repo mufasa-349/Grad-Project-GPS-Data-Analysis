@@ -764,7 +764,7 @@
         return { refToRaw, rawToRef, avgRefToNearestRawM };
       }
 
-      /** OSM polyline üzerinde i indeksinde birim teğet (doğu, kuzey, m cinsinden). */
+      /** Unit tangent (east, north, m) on the OSM polyline at index i. */
       function refTangentUnitENU(refRows, i) {
         const n = refRows.length;
         if (n < 2) return { te: 1, tn: 0 };
@@ -782,8 +782,8 @@
       }
 
       /**
-       * Referans noktasından GNSS'e vektörün, rota teğetine dik birim normal yönündeki işaretli bileşeni (m).
-       * 0 çizgisi: OSM rotası (referans); +/− yolun bir tarafına sapmayı gösterir.
+       * Signed component (m) of ref→GNSS vector along the unit normal perpendicular to the route tangent.
+       * Y=0 on the chart is the OSM path; sign indicates which side of the path the fix lies on.
        */
       function signedCrossTrackMeters(gLat, gLon, refLat, refLon, te, tn) {
         const R = 6371000;
@@ -832,6 +832,35 @@
         }
       }
 
+      /**
+       * Places the hover label off the segment midpoint, perpendicular to the line; picks the side
+       * farther from the map center so the dashed connector stays visible.
+       */
+      function compareHoverTooltipLatLng(aLat, aLon, bLat, bLon, offsetM) {
+        const R = 6371000;
+        const toRad = (deg) => (deg * Math.PI) / 180;
+        const midLat = (aLat + bLat) / 2;
+        const midLon = (aLon + bLon) / 2;
+        const cosLat = Math.cos(toRad(midLat));
+        const de = toRad(bLon - aLon) * R * cosLat;
+        const dn = toRad(bLat - aLat) * R;
+        const len = Math.hypot(de, dn) || 1e-9;
+        const te = de / len;
+        const tn = dn / len;
+        const eL = offsetM * -tn;
+        const nL = offsetM * te;
+        const eR = offsetM * tn;
+        const nR = offsetM * -te;
+        const latL = midLat + (nL / R) * (180 / Math.PI);
+        const lonL = midLon + (eL / (R * cosLat)) * (180 / Math.PI);
+        const latR = midLat + (nR / R) * (180 / Math.PI);
+        const lonR = midLon + (eR / (R * cosLat)) * (180 / Math.PI);
+        const c = map.getCenter();
+        const dL = (latL - c.lat) * (latL - c.lat) + (lonL - c.lng) * (lonL - c.lng);
+        const dR = (latR - c.lat) * (latR - c.lat) + (lonR - c.lng) * (lonR - c.lng);
+        return dL >= dR ? [latL, lonL] : [latR, lonR];
+      }
+
       function showCompareHoverLine(aLat, aLon, bLat, bLon, distM) {
         clearCompareHover();
         compareHoverPolyline = L.polyline(
@@ -847,15 +876,15 @@
             interactive: false,
           }
         ).addTo(map);
-        const midLat = (aLat + bLat) / 2;
-        const midLon = (aLon + bLon) / 2;
+        const offM = 18;
+        const [tipLat, tipLon] = compareHoverTooltipLatLng(aLat, aLon, bLat, bLon, offM);
         compareHoverTooltip = L.tooltip({
           permanent: true,
           direction: "center",
           className: "compare-hover-tooltip",
         })
-          .setLatLng([midLat, midLon])
-          .setContent(`Sapma: ${fmtNum(distM, 2)} m`)
+          .setLatLng([tipLat, tipLon])
+          .setContent(`Deviation: ${fmtNum(distM, 2)} m`)
           .addTo(map);
       }
 
@@ -1423,6 +1452,14 @@
         }
 
         lastCompareNN = precomputeCompareNearestNeighbors(lastRefRows, lastRawPoints);
+        const deviationPoints =
+          lastRawPoints.length && lastRefRows.length && lastCompareNN && lastCompareNN.rawToRef.length
+            ? computeSignedDeviationsForCompare(
+                lastRawPoints,
+                lastRefRows,
+                lastCompareNN.rawToRef
+              )
+            : [];
 
         const radiusForAccuracy = (a) => {
           if (a === null || !Number.isFinite(a)) return 4;
@@ -1451,8 +1488,11 @@
               fillOpacity: 0.95,
             });
             const t = r.isoTime || "";
+            const nnRef = lastCompareNN && lastCompareNN.refToRaw[i];
+            const devToRaw =
+              nnRef && Number.isFinite(nnRef.distM) ? `${fmtNum(nnRef.distM, 2)} m` : "—";
             m.bindPopup(
-              `<div class="tooltip"><div><b>OSM reference</b></div><div><b>Time</b>: ${t}</div></div>`,
+              `<div class="tooltip"><div><b>OSM reference</b></div><div><b>Time</b>: ${t}</div><div><b>Deviation (Haversine to nearest raw fix)</b>: ${devToRaw}</div></div>`,
               { maxWidth: 280 }
             );
             m.on("mouseover", () => {
@@ -1484,12 +1524,22 @@
               fillColor: fill,
               fillOpacity: 0.78,
             });
+            const nnRaw = lastCompareNN && lastCompareNN.rawToRef[pi];
+            const devHaversine =
+              nnRaw && Number.isFinite(nnRaw.distM) ? `${fmtNum(nnRaw.distM, 2)} m` : "—";
+            const dPt = deviationPoints[pi];
+            const devSigned =
+              dPt && Number.isFinite(dPt.signedDeviationM)
+                ? `${fmtNum(dPt.signedDeviationM, 3)} m`
+                : "—";
             const popupHtml = `
             <div class="tooltip">
               <div><b>Raw GNSS Fix</b></div>
               <div><b>Latitude</b>: ${fmtNum(p.lat, 6)}</div>
               <div><b>Longitude</b>: ${fmtNum(p.lon, 6)}</div>
               <div><b>Altitude</b>: ${fmtNum(p.alt, 3)} m</div>
+              <div><b>Deviation (Haversine to nearest OSM point)</b>: ${devHaversine}</div>
+              <div><b>Signed cross-track deviation</b>: ${devSigned}</div>
               <div><b>Distance from first</b>: ${
                 p.distFromFirstMeters === null ? "-" : fmtNum(p.distFromFirstMeters, 2) + " m"
               }</div>
@@ -1531,13 +1581,8 @@
 
         if (lastRawPoints.length > 0) {
           setSelected(lastRawPoints[0]);
-          const deviationPoints = computeSignedDeviationsForCompare(
-            lastRawPoints,
-            lastRefRows,
-            lastCompareNN ? lastCompareNN.rawToRef : []
-          );
-          renderCoordGraph(deviationPoints, {
-            compareDeviation: true,
+          renderCoordGraph(deviationPoints.length ? deviationPoints : lastRawPoints, {
+            compareDeviation: deviationPoints.length > 0,
             avgRefToNearestRawM:
               lastCompareNN && Number.isFinite(lastCompareNN.avgRefToNearestRawM)
                 ? lastCompareNN.avgRefToNearestRawM
@@ -1983,7 +2028,7 @@
         map.fitBounds(cb.pad(0.12), { maxZoom: 21 });
       }
 
-      /** Karşılaştırma modu: Y = −3…+3 m (0.5 adım), 0 = referans; X = boylam. */
+      /** Compare mode chart: Y = −3…+3 m (0.5 m steps), 0 = OSM reference; X = longitude. */
       function drawCompareDeviationChart(points, graphOpts) {
         const width = 900;
         const height = 320;
@@ -2018,7 +2063,7 @@
             .attr("font-size", 11)
             .attr("font-weight", 600)
             .text(
-              `Ortalama sapma (her OSM noktası → en yakın GNSS, Haversine): ${fmtNum(
+              `Mean deviation (each OSM point → nearest GNSS, Haversine): ${fmtNum(
                 graphOpts.avgRefToNearestRawM,
                 2
               )} m`
@@ -2082,7 +2127,7 @@
           .attr("text-anchor", "middle")
           .attr("fill", "rgba(231,236,255,0.9)")
           .attr("font-size", 12)
-          .text("Sapma (m) — 0 = OSM referansı");
+          .text("Deviation (m) — 0 = OSM reference");
 
         g.append("g")
           .selectAll("circle")
@@ -2105,8 +2150,8 @@
             const clipped =
               Number.isFinite(d.signedDeviationM) && (d.signedDeviationM < -3 || d.signedDeviationM > 3);
             graphTooltip.innerHTML = `
-              <div><b>İşaretli sapma (OSM rotasına göre)</b>: ${raw} m${
-              clipped ? " (grafikte ±3 m ile sınırlandı)" : ""
+              <div><b>Signed cross-track deviation (vs OSM path)</b>: ${raw} m${
+              clipped ? " (clipped to ±3 m on chart)" : ""
             }</div>
               <div><b>Longitude</b>: ${fmtNum(d.lon, 6)}</div>
               <div><b>Altitude</b>: ${fmtNum(d.alt, 3)} m</div>
@@ -2144,7 +2189,7 @@
         const graphTitleEl = document.querySelector("#graphWrap .graphTitle");
         if (graphOpts.compareDeviation) {
           if (graphTitleEl) {
-            graphTitleEl.textContent = "Boylam — OSM rotasına göre işaretli sapma (m)";
+            graphTitleEl.textContent = "Longitude vs signed deviation from OSM path (m)";
           }
           if (!points || points.length === 0) return;
           drawCompareDeviationChart(points, graphOpts);
