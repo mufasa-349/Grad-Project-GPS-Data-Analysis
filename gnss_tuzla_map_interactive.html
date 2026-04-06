@@ -110,6 +110,17 @@
         font-weight: 650;
       }
 
+      .leaflet-tooltip.compare-hover-tooltip {
+        background: rgba(15, 23, 42, 0.92);
+        color: rgba(254, 243, 199, 0.98);
+        border: 1px solid rgba(251, 191, 36, 0.55);
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+      }
+
       .btn {
         border: 1px solid rgba(255, 255, 255, 0.18);
         background: transparent;
@@ -599,6 +610,9 @@
 
       let lastRefRows = [];
       let lastRawPoints = [];
+      /** @type {{ refToRaw: Array<{ rawIdx: number; distM: number }>; rawToRef: Array<{ refIdx: number; distM: number }>; avgRefToNearestRawM: number } | null} */
+      let lastCompareNN = null;
+      let compareHoverPolyline = null;
 
       function isCompareMode() {
         return ui.fileSelect && ui.fileSelect.value === "__COMPARE_REAL_VS_RAW__";
@@ -630,6 +644,7 @@
       let lastPoints = [];
       let routeLayer = null;
       let routePreviewGroup = L.layerGroup().addTo(map);
+      let compareHoverTooltip = null;
       let lastPreviewIdx = null;
       let routeMouseMoveHandler = null;
       let routeMouseOutHandler = null;
@@ -707,6 +722,141 @@
 
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
+      }
+
+      function precomputeCompareNearestNeighbors(refRows, rawPoints) {
+        const nR = refRows.length;
+        const nP = rawPoints.length;
+        if (!nR || !nP) {
+          return { refToRaw: [], rawToRef: [], avgRefToNearestRawM: NaN };
+        }
+        const refToRaw = new Array(nR);
+        for (let i = 0; i < nR; i++) {
+          const r = refRows[i];
+          let bestD = Infinity;
+          let bestJ = 0;
+          for (let j = 0; j < nP; j++) {
+            const p = rawPoints[j];
+            const d = haversineMeters(r.lat, r.lon, p.lat, p.lon);
+            if (d < bestD) {
+              bestD = d;
+              bestJ = j;
+            }
+          }
+          refToRaw[i] = { rawIdx: bestJ, distM: bestD };
+        }
+        const rawToRef = new Array(nP);
+        for (let j = 0; j < nP; j++) {
+          const p = rawPoints[j];
+          let bestD = Infinity;
+          let bestI = 0;
+          for (let i = 0; i < nR; i++) {
+            const r = refRows[i];
+            const d = haversineMeters(r.lat, r.lon, p.lat, p.lon);
+            if (d < bestD) {
+              bestD = d;
+              bestI = i;
+            }
+          }
+          rawToRef[j] = { refIdx: bestI, distM: bestD };
+        }
+        const avgRefToNearestRawM = d3.mean(refToRaw.map((x) => x.distM));
+        return { refToRaw, rawToRef, avgRefToNearestRawM };
+      }
+
+      /** OSM polyline üzerinde i indeksinde birim teğet (doğu, kuzey, m cinsinden). */
+      function refTangentUnitENU(refRows, i) {
+        const n = refRows.length;
+        if (n < 2) return { te: 1, tn: 0 };
+        const i0 = Math.max(0, i - 1);
+        const i1 = Math.min(n - 1, i + 1);
+        const r0 = refRows[i0];
+        const r1 = refRows[i1];
+        const R = 6371000;
+        const toRad = (deg) => (deg * Math.PI) / 180;
+        const cosLat = Math.cos(toRad((r0.lat + r1.lat) * 0.5));
+        const de = toRad(r1.lon - r0.lon) * R * cosLat;
+        const dn = toRad(r1.lat - r0.lat) * R;
+        const len = Math.hypot(de, dn) || 1e-9;
+        return { te: de / len, tn: dn / len };
+      }
+
+      /**
+       * Referans noktasından GNSS'e vektörün, rota teğetine dik birim normal yönündeki işaretli bileşeni (m).
+       * 0 çizgisi: OSM rotası (referans); +/− yolun bir tarafına sapmayı gösterir.
+       */
+      function signedCrossTrackMeters(gLat, gLon, refLat, refLon, te, tn) {
+        const R = 6371000;
+        const toRad = (deg) => (deg * Math.PI) / 180;
+        const east = toRad(gLon - refLon) * R * Math.cos(toRad(refLat));
+        const north = toRad(gLat - refLat) * R;
+        const ne = -tn;
+        const nn = te;
+        return east * ne + north * nn;
+      }
+
+      function computeSignedDeviationsForCompare(rawPoints, refRows, rawToRef) {
+        const out = [];
+        for (let j = 0; j < rawPoints.length; j++) {
+          const p = rawPoints[j];
+          const nn = rawToRef[j];
+          if (!nn || !refRows.length) {
+            out.push(Object.assign({}, p, { signedDeviationM: NaN }));
+            continue;
+          }
+          const i = nn.refIdx;
+          const r = refRows[i];
+          const { te, tn } = refTangentUnitENU(refRows, i);
+          const signed = signedCrossTrackMeters(p.lat, p.lon, r.lat, r.lon, te, tn);
+          out.push(Object.assign({}, p, { signedDeviationM: signed }));
+        }
+        return out;
+      }
+
+      function formatDeviationTick(d) {
+        if (d === 0) return "0";
+        const abs = Math.abs(d);
+        const body = Math.abs(abs - Math.round(abs)) < 1e-6 ? String(Math.round(abs)) : fmtNum(abs, 1);
+        if (d < 0) return `-${body}`;
+        return `+${body}`;
+      }
+
+      function clearCompareHover() {
+        if (compareHoverPolyline) {
+          map.removeLayer(compareHoverPolyline);
+          compareHoverPolyline = null;
+        }
+        if (compareHoverTooltip) {
+          map.removeLayer(compareHoverTooltip);
+          compareHoverTooltip = null;
+        }
+      }
+
+      function showCompareHoverLine(aLat, aLon, bLat, bLon, distM) {
+        clearCompareHover();
+        compareHoverPolyline = L.polyline(
+          [
+            [aLat, aLon],
+            [bLat, bLon],
+          ],
+          {
+            color: "#fbbf24",
+            weight: 2,
+            dashArray: "10 8",
+            opacity: 0.95,
+            interactive: false,
+          }
+        ).addTo(map);
+        const midLat = (aLat + bLat) / 2;
+        const midLon = (aLon + bLon) / 2;
+        compareHoverTooltip = L.tooltip({
+          permanent: true,
+          direction: "center",
+          className: "compare-hover-tooltip",
+        })
+          .setLatLng([midLat, midLon])
+          .setContent(`Sapma: ${fmtNum(distM, 2)} m`)
+          .addTo(map);
       }
 
       function meanLatLon(points) {
@@ -1204,6 +1354,7 @@
         lastPoints = lastRawPoints;
         layerGroup.clearLayers();
         clearRouteInteraction();
+        clearCompareHover();
         if (heatLayer) {
           map.removeLayer(heatLayer);
           heatLayer = null;
@@ -1271,6 +1422,8 @@
             .domain([distMin, distMax]);
         }
 
+        lastCompareNN = precomputeCompareNearestNeighbors(lastRefRows, lastRawPoints);
+
         const radiusForAccuracy = (a) => {
           if (a === null || !Number.isFinite(a)) return 4;
           return Math.max(3, Math.min(28, a * 2.5));
@@ -1302,12 +1455,23 @@
               `<div class="tooltip"><div><b>OSM reference</b></div><div><b>Time</b>: ${t}</div></div>`,
               { maxWidth: 280 }
             );
+            m.on("mouseover", () => {
+              if (lastCompareNN && lastCompareNN.refToRaw[i] && lastRawPoints.length) {
+                const nn = lastCompareNN.refToRaw[i];
+                const pr = lastRawPoints[nn.rawIdx];
+                showCompareHoverLine(r.lat, r.lon, pr.lat, pr.lon, nn.distM);
+              }
+            });
+            m.on("mouseout", () => {
+              clearCompareHover();
+            });
             m.addTo(layerGroup);
           }
         }
 
         if (showRaw) {
-          for (const p of lastRawPoints) {
+          for (let pi = 0; pi < lastRawPoints.length; pi++) {
+            const p = lastRawPoints[pi];
             const fill =
               p.distFromFirstMeters === null || !Number.isFinite(p.distFromFirstMeters)
                 ? "rgba(249,115,22,0.85)"
@@ -1336,10 +1500,16 @@
           `;
             marker.bindPopup(popupHtml, { maxWidth: 320 });
             marker.on("mouseover", () => {
+              if (lastCompareNN && lastCompareNN.rawToRef[pi] && lastRefRows.length) {
+                const nn = lastCompareNN.rawToRef[pi];
+                const rr = lastRefRows[nn.refIdx];
+                showCompareHoverLine(p.lat, p.lon, rr.lat, rr.lon, nn.distM);
+              }
               setSelected(p);
               marker.setStyle({ weight: 2, fillOpacity: 0.95 });
             });
             marker.on("mouseout", () => {
+              clearCompareHover();
               marker.setStyle({ weight: 1, fillOpacity: 0.78 });
             });
             marker.on("click", () => {
@@ -1361,9 +1531,24 @@
 
         if (lastRawPoints.length > 0) {
           setSelected(lastRawPoints[0]);
-          renderCoordGraph(lastRawPoints);
+          const deviationPoints = computeSignedDeviationsForCompare(
+            lastRawPoints,
+            lastRefRows,
+            lastCompareNN ? lastCompareNN.rawToRef : []
+          );
+          renderCoordGraph(deviationPoints, {
+            compareDeviation: true,
+            avgRefToNearestRawM:
+              lastCompareNN && Number.isFinite(lastCompareNN.avgRefToNearestRawM)
+                ? lastCompareNN.avgRefToNearestRawM
+                : NaN,
+          });
         } else {
           graphSvg.selectAll("*").remove();
+          const graphTitleEl = document.querySelector("#graphWrap .graphTitle");
+          if (graphTitleEl) {
+            graphTitleEl.textContent = "Longitude vs Altitude (normalized relation line)";
+          }
         }
       }
 
@@ -1372,6 +1557,8 @@
           renderComparison(lastRefRows, lastRawPoints);
           return;
         }
+        lastCompareNN = null;
+        clearCompareHover();
         lastPoints = points || [];
         layerGroup.clearLayers();
         clearRouteInteraction();
@@ -1796,8 +1983,177 @@
         map.fitBounds(cb.pad(0.12), { maxZoom: 21 });
       }
 
-      function renderCoordGraph(points) {
+      /** Karşılaştırma modu: Y = −3…+3 m (0.5 adım), 0 = referans; X = boylam. */
+      function drawCompareDeviationChart(points, graphOpts) {
+        const width = 900;
+        const height = 320;
+        const margin = { top: 30, right: 18, bottom: 56, left: 94 };
+        const innerW = width - margin.left - margin.right;
+        const innerH = height - margin.top - margin.bottom;
+
+        const lonExtent = d3.extent(points, (d) => d.lon);
+        const distVals = points
+          .map((d) => d.distFromFirstMeters)
+          .filter((v) => v !== null && Number.isFinite(v));
+        const distMin = distVals.length ? d3.min(distVals) : 0;
+        const distMax = distVals.length ? d3.max(distVals) : 0;
+        const colorByDistance = d3
+          .scaleSequential(d3.interpolateRgb("#2b5cff", "#ff3b30"))
+          .domain([distMin, distMax]);
+
+        const x = d3.scaleLinear().domain(lonExtent).nice().range([0, innerW]);
+        const y = d3.scaleLinear().domain([-3, 3]).range([innerH, 0]);
+
+        const g = graphSvg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const tickVals = [];
+        for (let t = -3; t <= 3 + 1e-9; t += 0.5) tickVals.push(t);
+
+        if (Number.isFinite(graphOpts.avgRefToNearestRawM)) {
+          g.append("text")
+            .attr("x", innerW)
+            .attr("y", -8)
+            .attr("text-anchor", "end")
+            .attr("fill", "rgba(251, 191, 36, 0.92)")
+            .attr("font-size", 11)
+            .attr("font-weight", 600)
+            .text(
+              `Ortalama sapma (her OSM noktası → en yakın GNSS, Haversine): ${fmtNum(
+                graphOpts.avgRefToNearestRawM,
+                2
+              )} m`
+            );
+        }
+
+        g.append("g")
+          .attr("transform", `translate(0,${innerH})`)
+          .call(
+            d3
+              .axisBottom(x)
+              .ticks(10)
+              .tickSize(-innerH)
+              .tickFormat("")
+          )
+          .selectAll("line")
+          .attr("stroke", "rgba(255,255,255,0.08)");
+
+        g.append("g")
+          .call(d3.axisLeft(y).tickValues(tickVals).tickSize(-innerW).tickFormat(""))
+          .selectAll("line")
+          .attr("stroke", "rgba(255,255,255,0.08)");
+
+        g.append("g")
+          .attr("transform", `translate(0,${innerH})`)
+          .call(d3.axisBottom(x).ticks(10).tickSize(0))
+          .selectAll("text")
+          .attr("fill", "rgba(231,236,255,0.85)");
+
+        g.append("g")
+          .call(
+            d3
+              .axisLeft(y)
+              .tickValues(tickVals)
+              .tickSize(0)
+              .tickFormat((d) => formatDeviationTick(d))
+          )
+          .selectAll("text")
+          .attr("fill", "rgba(231,236,255,0.85)");
+
+        g.append("line")
+          .attr("x1", 0)
+          .attr("x2", innerW)
+          .attr("y1", y(0))
+          .attr("y2", y(0))
+          .attr("stroke", "rgba(255,255,255,0.92)")
+          .attr("stroke-width", 2);
+
+        g.append("text")
+          .attr("x", innerW / 2)
+          .attr("y", innerH + 44)
+          .attr("text-anchor", "middle")
+          .attr("fill", "rgba(231,236,255,0.9)")
+          .attr("font-size", 12)
+          .text("Longitude (deg)");
+
+        g.append("text")
+          .attr("transform", "rotate(-90)")
+          .attr("x", -innerH / 2)
+          .attr("y", -72)
+          .attr("text-anchor", "middle")
+          .attr("fill", "rgba(231,236,255,0.9)")
+          .attr("font-size", 12)
+          .text("Sapma (m) — 0 = OSM referansı");
+
+        g.append("g")
+          .selectAll("circle")
+          .data(points)
+          .enter()
+          .append("circle")
+          .attr("cx", (d) => x(d.lon))
+          .attr("cy", (d) =>
+            y(Math.max(-3, Math.min(3, Number.isFinite(d.signedDeviationM) ? d.signedDeviationM : 0)))
+          )
+          .attr("r", 3)
+          .attr("fill", (d) =>
+            colorByDistance(d.distFromFirstMeters === null ? distMin : d.distFromFirstMeters)
+          )
+          .attr("opacity", 0.82)
+          .attr("stroke", "rgba(255,255,255,0.12)")
+          .on("mouseenter", function (event, d) {
+            setSelected(d);
+            const raw = Number.isFinite(d.signedDeviationM) ? fmtNum(d.signedDeviationM, 3) : "-";
+            const clipped =
+              Number.isFinite(d.signedDeviationM) && (d.signedDeviationM < -3 || d.signedDeviationM > 3);
+            graphTooltip.innerHTML = `
+              <div><b>İşaretli sapma (OSM rotasına göre)</b>: ${raw} m${
+              clipped ? " (grafikte ±3 m ile sınırlandı)" : ""
+            }</div>
+              <div><b>Longitude</b>: ${fmtNum(d.lon, 6)}</div>
+              <div><b>Altitude</b>: ${fmtNum(d.alt, 3)} m</div>
+              <div><b>Distance from first</b>: ${
+                d.distFromFirstMeters === null ? "-" : fmtNum(d.distFromFirstMeters, 2) + " m"
+              }</div>
+              <div><b>UnixTimeMillis</b>: ${
+                d.unixTimeMillis === null ? "-" : fmtNum(d.unixTimeMillis, 0)
+              }</div>
+              <div><b>ISO (UTC)</b>: ${
+                d.unixTimeMillis === null ? "-" : fmtISOFromMillis(d.unixTimeMillis)
+              }</div>
+            `;
+            graphTooltip.style.display = "block";
+            graphTooltip.style.left = `${event.clientX + 12}px`;
+            graphTooltip.style.top = `${event.clientY + 12}px`;
+            d3.select(this).attr("stroke-width", 2).attr("stroke", "rgba(255,255,255,0.65)");
+          })
+          .on("mousemove", function (event) {
+            graphTooltip.style.left = `${event.clientX + 12}px`;
+            graphTooltip.style.top = `${event.clientY + 12}px`;
+          })
+          .on("mouseleave", function () {
+            graphTooltip.style.display = "none";
+            d3.select(this).attr("stroke-width", 0).attr("stroke", "rgba(255,255,255,0.12)");
+          });
+
+        graphTooltip.style.display = "none";
+      }
+
+      function renderCoordGraph(points, graphOpts) {
+        graphOpts = graphOpts || {};
         graphSvg.selectAll("*").remove();
+
+        const graphTitleEl = document.querySelector("#graphWrap .graphTitle");
+        if (graphOpts.compareDeviation) {
+          if (graphTitleEl) {
+            graphTitleEl.textContent = "Boylam — OSM rotasına göre işaretli sapma (m)";
+          }
+          if (!points || points.length === 0) return;
+          drawCompareDeviationChart(points, graphOpts);
+          return;
+        }
+
+        if (graphTitleEl) {
+          graphTitleEl.textContent = "Longitude vs Altitude (normalized relation line)";
+        }
 
         if (!points || points.length === 0) return;
 
