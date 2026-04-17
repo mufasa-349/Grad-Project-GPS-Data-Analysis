@@ -3,18 +3,14 @@
 % Calibri requires XeLaTeX or LuaLaTeX + system font (e.g. Microsoft Office / Windows fonts on macOS).
 \documentclass[12pt,a4paper]{article}
 
-\usepackage{fontspec}
-% 12 pt: set by \documentclass[12pt,...]{article} above.
-\IfFontExistsTF{Calibri}{%
-  \setmainfont{Calibri}[Ligatures=TeX]%
-}{%
-  \typeout{^^Jwarning: Calibri not found (install Microsoft fonts / Office for exact match). Using Helvetica Neue as fallback.^^J}%
-  \setmainfont{Helvetica Neue}[Ligatures=TeX]%
-}
+% Font note:
+% - This document is meant to compile reliably on systems without MS Office fonts.
+% - XeLaTeX handles Unicode (e.g., Ö, Ş) without extra inputenc settings.
 
 \usepackage[margin=1in]{geometry}
 \usepackage{setspace}
 \usepackage{enumitem}
+\usepackage{amsmath}
 \usepackage{cite}
 \usepackage{booktabs}
 \usepackage{url}
@@ -30,7 +26,7 @@
 \begin{center}
     \vspace*{1.25em}
     {\LARGE\bfseries ENS 491 -- Graduation Project (Design)}\\[0.85em]
-    {\large\bfseries (Draft) Proposal}
+    {\large\bfseries Proposal}
 
     \vfill
 
@@ -50,7 +46,7 @@
     \vspace{1.35em}
 
     {\bfseries Date}\\[0.55em]
-    {\normalsize March 29, 2026}
+    {\normalsize April 17, 2026}
 
     \vfill
 
@@ -137,17 +133,48 @@ Report and advisor alignment & ENS 491/492 deliverables updated each term \\
 \subsection{Realistic Constraints}
 
 \begin{itemize}[leftmargin=1.5em]
-    \item \textbf{Economic:} No dedicated hardware budget; use student devices and free/open map tiles (e.g., OpenStreetMap). Engineering cost is primarily time.
     \item \textbf{Environmental:} Field logging has negligible environmental impact; we avoid unnecessary travel for data collection.
     \item \textbf{Social/Privacy:} Location traces are sensitive; we use consented, locally stored logs and avoid publishing raw coordinates at identifiable resolution in public repos (see Ethics).
     \item \textbf{Health and Safety:} Outdoor walking data collection should follow normal pedestrian safety; no hazardous materials.
     \item \textbf{Manufacturability / deployment:} Prototype is a browser application; depends on modern browsers and JavaScript; GitHub Pages hosting is adequate for demos.
-    \item \textbf{Sustainability:} Open formats (text logs) aid long-term reproducibility; documentation reduces dependency on single maintainers.
 \end{itemize}
 
 \subsection{Engineering/Scientific Standards}
 
 We align with good practice for \textbf{empirical visualization and HCI research} (transparent stimuli, documented parameters) and with \textbf{geospatial data quality} principles (metadata such as \texttt{AccuracyMeters}, honest labeling of synthetic vs.\ real data). Where map matching or road networks become central, established GIS and transportation methods apply \cite{MillardBall2019}. We do not claim compliance with a single mandatory industry code; the advisor may require additional standards (e.g., accessibility) as the project evolves.
+
+\subsection{Sustainability and Life Cycle Assessment}
+
+\noindent\textbf{Sustainability:} Open formats (text logs) aid long-term reproducibility; documentation reduces dependency on single maintainers.
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Functional unit:} One complete analysis session consisting of (i) importing one GNSS Logger \texttt{Fix}-only trace (e.g., 5--30 minutes of walking/driving), (ii) rendering map-based uncertainty views (points/heatmap/accuracy rings), and (iii) generating the deviation summary versus an OSM reference polyline.
+    \item \textbf{System boundary (gate-to-gate, software-focused):} Smartphone GNSS logging (existing devices), local preprocessing in browser/JavaScript, and optional static web hosting for demos (e.g., GitHub Pages). We exclude device manufacturing and user travel beyond normal commuting/walking because they are not driven by the software itself.
+    \item \textbf{Energy consumption estimate:} A typical session on a laptop is expected to be CPU-light and short. Assuming a 30 W average laptop draw for 10 minutes of active analysis, energy use is
+    \[
+      E \approx 30~\text{W} \times \frac{10}{60}~\text{h} \approx 5~\text{Wh} = 0.005~\text{kWh}.
+    \]
+    \item \textbf{Carbon footprint (kg CO$_2$ eq):} Using a conservative grid intensity of 0.4 kg CO$_2$/kWh, the operational footprint per session is:
+    \begin{align*}
+      \text{CO}_2 &\approx 0.005~\text{kWh} \times 0.4~\frac{\text{kg CO}_2}{\text{kWh}} \\
+                 &\approx 0.002~\text{kg CO}_2 \;\; (\sim 2~\text{g}).
+    \end{align*}
+    Static hosting for demos is negligible at this scale; we primarily rely on local execution.
+    \item \textbf{Comparison to a conventional alternative:} A ``blue-dot only'' or ``single-point'' map has similar compute cost but can increase downstream costs (time, risk, rework) by encouraging overconfident interpretation. Our approach aims to reduce decision error without increasing operational energy meaningfully.
+\end{itemize}
+
+\subsection{Economic Feasibility and Life Cycle Cost Analysis}
+
+\noindent\textbf{Economic:} No dedicated hardware budget; use student devices and free/open map tiles (e.g., OpenStreetMap). Engineering cost is primarily time.
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Material/component cost:} \$0 incremental hardware (smartphones/laptops already owned by students). Optional accessories (power bank, phone holder) are non-essential and can be avoided.
+    \item \textbf{Implementation cost:} The main cost driver is engineering effort. For a small team prototype, we assume on the order of 200--300 total person-hours across ENS~491/492 for coding, iteration, and reporting. This is an academic cost rather than a cash expense.
+    \item \textbf{Operational cost:} For demos, static hosting (GitHub Pages) is \$0. If a server is needed later (not required for the current prototype), a minimal cloud instance could be \$5--\$15/month.
+    \item \textbf{Maintenance and service cost:} Low for a static web prototype; periodic updates may be needed when browser APIs or libraries change (e.g., Leaflet/D3 upgrades). We mitigate this with pinned vendor assets and reproducible documentation.
+    \item \textbf{End-of-life cost:} Minimal; the system can be archived as a static repository. Data retention policies (deleting sensitive traces, keeping aggregated results) are the primary ``lifecycle'' concern.
+    \item \textbf{Cost per unit and performance-to-cost ratio:} For the functional unit (one analysis session), the marginal cash cost is effectively \$0, while the expected performance benefit is improved interpretability of location uncertainty and clearer error/deviation communication. Relative to conventional point-only displays, the value proposition is favorable because it improves decision quality without requiring additional infrastructure.
+\end{itemize}
 
 \section{RISK MANAGEMENT}
 
